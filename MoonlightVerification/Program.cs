@@ -112,5 +112,17 @@ class Program // 검증 실행기
         GameClock.Advance(afterRestore, settings, 0.1, null); // 정산 이후 진행
         Check(beforeRestore.Debt == checkpoint.Debt && beforeRestore.Chips == checkpoint.Chips && beforeRestore.BillCount == 1, "청구 직전 복구 후 단일 정산"); // 청구 직전 복구 검증
         Check(afterRestore.Debt == checkpoint.Debt && afterRestore.Chips == checkpoint.Chips && afterRestore.BillCount == 1, "정산 직후 복구 중복 방지"); // 정산 직후 복구 검증
+        var flowSettings = new GameSettings { startingChips = 100, startingDebt = 1000, minimumBill = 1, workReward = 3000, workMinutes = 2, minBet = 10, maxBet = 100, billingHours = 1 }; // 빠른 통합 검증 설정
+        var flow = new GameState(flowSettings); // 새 게임 시작
+        flow.StartWork(flowSettings); // 업무 시작
+        GameClock.Advance(flow, flowSettings, 2, null); // 업무 완료
+        Check(flow.StartBlackjack(flowSettings, 10), "통합 흐름 베팅 시작"); // 베팅 가능 확인
+        if (flow.Round.phase == 1) // 진행 중 라운드 확인
+        { // 라운드 완료 시작
+            flow.Stand(flowSettings); // 딜러 정산
+        } // 라운드 완료 끝
+        GameClock.Advance(flow, flowSettings, 58, null); // 첫 청구까지 진행
+        Check(!flow.GameOver && flow.BillCount == 1, "통합 흐름 청구 납부"); // 정기 청구 확인
+        Check(flow.RepayAll() && flow.Escaped, "통합 흐름 전액 상환 탈출"); // 최종 탈출 확인
     } // 검증 범위 끝
 } // 실행기 끝

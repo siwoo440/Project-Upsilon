@@ -45,6 +45,12 @@ namespace Moonlight // 게임 이름 공간
             Box("기둥 장식", x, 3.8f, z, 0.85f, 0.22f, 0.85f, gold, false); // 금색 기둥 장식
             Box("기둥 하단", x, 0.2f, z, 0.85f, 0.4f, 0.85f, gold); // 기둥 받침
         } // 기둥 생성 끝
+        static void Lamp(float x, float z) // 장식 조명 모형
+        { // 조명 생성 시작
+            Shape("조명 받침", PrimitiveType.Cylinder, new Vector3(x, 0.18f, z), new Vector3(0.38f, 0.18f, 0.38f), gold); // 금색 조명 받침
+            Shape("조명 기둥", PrimitiveType.Cylinder, new Vector3(x, 0.8f, z), new Vector3(0.1f, 0.55f, 0.1f), gold, false); // 조명 기둥
+            Shape("둥근 조명", PrimitiveType.Sphere, new Vector3(x, 1.55f, z), new Vector3(0.5f, 0.5f, 0.5f), cream, false); // 따뜻한 조명 구체
+        } // 조명 생성 끝
         public static void Build() // 카지노 전체 구성
         { // 맵 구성 시작
             root = new GameObject("Casino Blockout").transform; // 교체 가능한 맵 묶음
@@ -59,6 +65,11 @@ namespace Moonlight // 게임 이름 공간
             Box("서쪽 벽", -21, 2.5f, 0, 0.5f, 5, 42, black); // 서쪽 경계
             Box("동쪽 벽", 21, 2.5f, 0, 0.5f, 5, 42, black); // 동쪽 경계
             Box("중앙 카펫", 0, 0.012f, 0, 5, 0.025f, 40, burgundy, false); // 중앙 이동 축
+            Box("카펫 금색 테두리 왼쪽", -2.35f, 0.03f, 0, 0.08f, 0.015f, 40, gold, false); // 왼쪽 금색 선
+            Box("카펫 금색 테두리 오른쪽", 2.35f, 0.03f, 0, 0.08f, 0.015f, 40, gold, false); // 오른쪽 금색 선
+            Box("무대 상단 장식", 0, 4.85f, 20.1f, 13, 0.22f, 0.5f, gold, false); // 무대 금색 상단
+            Box("서쪽 벽 장식", -20.7f, 4.6f, 0, 0.12f, 0.14f, 41, gold, false); // 왼쪽 벽 금색 선
+            Box("동쪽 벽 장식", 20.7f, 4.6f, 0, 0.12f, 0.14f, 41, gold, false); // 오른쪽 벽 금색 선
             Box("왼쪽 홀 카펫", -12, 0.014f, 4, 15, 0.025f, 16, burgundy, false); // 블랙잭 구역
             Box("오른쪽 홀 카펫", 12, 0.014f, 4, 15, 0.025f, 16, burgundy, false); // 룰렛 구역
             Box("무대 커튼", 0, 2.7f, 20.5f, 12, 4.8f, 0.3f, burgundy); // 북쪽 무대 배경
@@ -81,6 +92,8 @@ namespace Moonlight // 게임 이름 공간
             { // 기둥 배치 시작
                 Column(-3.8f, i * 9); // 왼쪽 중앙 기둥
                 Column(3.8f, i * 9); // 오른쪽 중앙 기둥
+                Lamp(-5, i * 9); // 왼쪽 중앙 조명
+                Lamp(5, i * 9); // 오른쪽 중앙 조명
             } // 기둥 배치 끝
             Box("라운지 소파 왼쪽", -15, 0.45f, -14, 5, 0.9f, 1.2f, burgundy); // 왼쪽 휴식 공간
             Box("VIP 소파", 14, 0.45f, 16, 5, 0.9f, 1.2f, burgundy); // VIP 임시 공간
