@@ -42,6 +42,48 @@ namespace Moonlight // 게임 이름 공간
             return ace && low + 10 <= 21; // 소프트 여부 반환
         } // 소프트 확인 끝
     } // 판정 끝
+    public static class GameClock // 시간과 업무 진행
+    { // 시계 시작
+        public static void Advance(GameState game, GameSettings settings, double elapsed, Action<string> notify) // 시간 경계 처리
+        { // 시간 처리 시작
+            while (elapsed > 0 && !game.GameOver && !game.Escaped) // 남은 시간 반복
+            { // 시간 구간 시작
+                double untilBill = Math.Max(0, game.NextBill - game.Minutes); // 청구까지 남은 시간
+                double step = Math.Min(elapsed, untilBill); // 청구 경계까지 진행
+                if (game.WorkRemaining > 0) // 진행 중인 업무 확인
+                { // 업무 경계 시작
+                    step = Math.Min(step, game.WorkRemaining); // 업무 완료 시각 제한
+                } // 업무 경계 끝
+                game.Minutes += step; // 게임 시각 증가
+                elapsed -= step; // 남은 시간 감소
+                if (game.WorkRemaining > 0) // 업무 시간 확인
+                { // 업무 시간 시작
+                    game.WorkRemaining = Math.Max(0, game.WorkRemaining - step); // 업무 남은 시간 감소
+                } // 업무 시간 끝
+                if (game.Minutes >= game.NextBill) // 청구 시각 확인
+                { // 청구 처리 시작
+                    notify?.Invoke("before_bill"); // 청구 직전 알림
+                    bool paid = game.SettleBill(settings); // 청구 정산
+                    notify?.Invoke("after_bill"); // 정산 직후 알림
+                    notify?.Invoke(paid ? "paid" : "failed"); // 청구 결과 알림
+                    if (!paid) // 납부 실패 확인
+                    { // 실패 처리 시작
+                        break; // 업무 보상 전 종료
+                    } // 실패 처리 끝
+                } // 청구 처리 끝
+                if (game.WorkRemaining == 0 && game.WorkActive) // 업무 완료 확인
+                { // 보상 처리 시작
+                    game.WorkActive = false; // 업무 완료 표시
+                    game.Chips = checked(game.Chips + settings.workReward); // 확정 보상 지급
+                    notify?.Invoke("work_done"); // 업무 완료 알림
+                } // 보상 처리 끝
+                if (step == 0 && game.Minutes < game.NextBill) // 진행 불가 확인
+                { // 반복 중단 시작
+                    break; // 무한 반복 방지
+                } // 반복 중단 끝
+            } // 시간 구간 끝
+        } // 시간 처리 끝
+    } // 시계 끝
     [Serializable] public class GameState // 저장 가능한 전체 경제 상태
     { // 상태 시작
         public long Chips, Debt, Loan; // 확정 칩과 부채

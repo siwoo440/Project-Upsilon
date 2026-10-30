@@ -84,28 +84,28 @@ namespace Moonlight // 게임 이름 공간
         } // 갱신 끝
         void Advance(double elapsed) // 시계와 업무 처리
         { // 시간 처리 시작
-            while (elapsed > 0 && !game.GameOver && !game.Escaped) // 남은 시간 처리
-            { // 시간 구간 시작
-                double untilBill = Math.Max(0, game.NextBill - game.Minutes); // 청구까지 시간
-                double step = Math.Min(elapsed, untilBill); // 청구 경계까지 진행
-                if (game.WorkRemaining > 0) step = Math.Min(step, game.WorkRemaining); // 업무 완료 경계
-                game.Minutes += step; elapsed -= step; // 시간 증가
-                if (game.WorkRemaining > 0) game.WorkRemaining = Math.Max(0, game.WorkRemaining - step); // 업무 시간 감소
-                if (game.Minutes >= game.NextBill) // 청구 시각 우선 처리
-                { // 청구 시작
-                    Save("before_bill"); // 청구 직전 별도 저장
-                    bool paid = game.SettleBill(settings); // 청구 정산
-                    Save("after_bill"); // 정산 직후 별도 저장
-                    message = paid ? "정기 청구 납부 완료" : "청구액을 납부하지 못했습니다."; // 결과 안내
-                    if (!paid) break; // 실패 시 활동 중단
-                } // 청구 끝
-                if (game.WorkRemaining == 0 && game.WorkActive) // 업무 완료 확인
-                { // 업무 보상 시작
-                    game.WorkActive = false; game.Chips += settings.workReward; message = "업무 완료: " + settings.workReward.ToString("N0") + "칩"; Save("event"); // 확정 보상과 저장
-                } // 업무 보상 끝
-                if (step == 0 && game.Minutes < game.NextBill) break; // 무한 반복 방지
-            } // 시간 구간 끝
+            GameClock.Advance(game, settings, elapsed, OnClockEvent); // 시간과 청구 진행
         } // 시간 처리 끝
+        void OnClockEvent(string eventName) // 시계 이벤트 반영
+        { // 이벤트 처리 시작
+            if (eventName == "before_bill" || eventName == "after_bill") // 청구 저장 시점
+            { // 청구 저장 시작
+                Save(eventName); // 청구 전후 별도 저장
+            } // 청구 저장 끝
+            if (eventName == "paid") // 납부 성공 확인
+            { // 성공 안내 시작
+                message = "정기 청구 납부 완료"; // 성공 문구
+            } // 성공 안내 끝
+            if (eventName == "failed") // 납부 실패 확인
+            { // 실패 안내 시작
+                message = "청구액을 납부하지 못했습니다."; // 실패 문구
+            } // 실패 안내 끝
+            if (eventName == "work_done") // 업무 완료 확인
+            { // 업무 완료 시작
+                Save("event"); // 업무 완료 저장
+                message = "업무 완료: " + settings.workReward.ToString("N0") + "칩"; // 보상 안내
+            } // 업무 완료 끝
+        } // 이벤트 처리 끝
         void Interact() // 가까운 장소 이용
         { // 상호작용 시작
             string target = MapLayout.Nearest(transform.position.x, transform.position.z); // 최근접 대상 확인

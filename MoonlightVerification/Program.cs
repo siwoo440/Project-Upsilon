@@ -47,5 +47,15 @@ class Program // 검증 실행기
         Check(MapLayout.Nearest(0, -17) == "", "먼 거리 상호작용 차단"); // 거리 제한 확인
         Check(MenuState.TogglePause("blackjack", "") == "pause", "진행 화면에서 일시정지"); // 일시정지 확인
         Check(MenuState.TogglePause("pause", "blackjack") == "blackjack", "일시정지 전 화면 복원"); // 게임 화면 복원 확인
+        var work = new GameState(settings); // 업무 검증 상태
+        work.Chips = 0; work.StartWork(settings); // 칩 없이 업무 시작
+        GameClock.Advance(work, settings, settings.workMinutes, null); // 업무 완료까지 진행
+        Check(work.Chips == settings.workReward && !work.WorkActive, "업무 완료 보상"); // 업무 보상 확인
+        GameClock.Advance(work, settings, 1, null); // 추가 시간 진행
+        Check(work.Chips == settings.workReward, "업무 보상 중복 방지"); // 중복 보상 확인
+        var simultaneous = new GameState(settings); // 동시 발생 검증 상태
+        simultaneous.Chips = 0; simultaneous.NextBill = settings.workMinutes; simultaneous.StartWork(settings); // 업무와 청구 시각 일치
+        GameClock.Advance(simultaneous, settings, settings.workMinutes, null); // 동시 시각까지 진행
+        Check(simultaneous.GameOver && simultaneous.Chips == 0, "청구 시 미확정 업무 보상 제외"); // 청구 우선 확인
     } // 검증 범위 끝
 } // 실행기 끝
