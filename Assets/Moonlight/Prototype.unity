@@ -149,7 +149,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Moonlight.Prototype
   settings:
-    startingChips: 5000000
+    startingChips: 10000000
     startingDebt: 1000000000
     minimumBill: 20000000
     workReward: 4000000

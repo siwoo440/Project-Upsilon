@@ -86,5 +86,33 @@ public static class DayTwoValidation // 이동 경로 검증 도구
             System.IO.File.Delete(savePath); // 검증 파일 삭제
         } // 정리 끝
         Debug.Log("DAY8_FILE_OK"); // 저장 파일 검증 성공
+        GameState memberGame = new GameState(settings); // 회원 승급 검증 상태
+        memberGame.Chips = 122400000; memberGame.Member.Experience = 70; // 청구와 경험치 조건
+        if (!memberGame.SettleBill(settings) || memberGame.Member.Rank != 1 || memberGame.Chips != settings.silverBonus) // 승급 결과 확인
+        { // 승급 실패 시작
+            throw new Exception("회원 승급 검증 실패"); // 실패 알림
+        } // 승급 실패 끝
+        GameState memberRestored = JsonUtility.FromJson<GameState>(JsonUtility.ToJson(memberGame)); // 회원 저장 복구
+        long savedChips = memberRestored.Chips; // 복구 칩 보관
+        memberRestored.CheckPromotion(settings); // 복구 후 승급 재검사
+        if (memberRestored.Member.Rank != 1 || !memberRestored.Member.SilverBonusPaid || memberRestored.Chips != savedChips) // 보너스 중복 확인
+        { // 회원 복구 실패 시작
+            throw new Exception("회원 저장 복구 검증 실패"); // 실패 알림
+        } // 회원 복구 실패 끝
+        Debug.Log("MEMBERSHIP_JSON_OK"); // 회원 저장 검증 성공
+        GameState legacy = JsonUtility.FromJson<GameState>("{\"Chips\":1234,\"Debt\":9000}"); // 이전 형식 저장 자료 복구
+        legacy.EnsureMembership(); // 누락된 회원 정보 생성
+        if (legacy.Chips != 1234 || legacy.Member.Rank != 0 || legacy.Member.Experience != 0) // 기존 저장 보존 확인
+        { // 이전 저장 실패 시작
+            throw new Exception("기존 저장 회원 정보 변환 실패"); // 실패 알림
+        } // 이전 저장 실패 끝
+        Debug.Log("MEMBERSHIP_LEGACY_OK"); // 기존 저장 검증 성공
+        EditorSceneManager.OpenScene("Assets/Moonlight/Prototype.unity", OpenSceneMode.Single); // 실제 시제품 장면 열기
+        Prototype prototype = UnityEngine.Object.FindFirstObjectByType<Prototype>(); // 장면 설정 확인
+        if (prototype == null || prototype.settings.startingChips != 10000000 || prototype.settings.silverBonus != 20000000 || prototype.settings.workExperience != 10) // 장면 설정값 확인
+        { // 장면 설정 실패 시작
+            throw new Exception("회원 기본 설정이 장면에 반영되지 않았습니다."); // 실패 알림
+        } // 장면 설정 실패 끝
+        Debug.Log("MEMBERSHIP_SCENE_OK"); // 실제 장면 설정 검증 성공
     } // 검사 끝
 } // 검증 도구 끝

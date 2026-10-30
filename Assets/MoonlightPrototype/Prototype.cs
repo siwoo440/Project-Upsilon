@@ -19,6 +19,7 @@ namespace Moonlight // 게임 이름 공간
         float yaw, pitch; // 시점 회전
         string panel = "", message = "루나에게 안내를 받은 뒤 업무와 블랙잭을 이용하세요."; // 현재 화면과 안내
         string previousPanel = ""; // 일시정지 전 화면
+        int announcedRank; // 마지막 안내 등급
         long bet = 1000000; // 베팅 금액
         GUIStyle label, button; // 화면 글꼴 설정
         string SavePath(string slot) { return Path.Combine(Application.persistentDataPath, "moonlight_" + slot + ".json"); } // 저장 경로
@@ -51,8 +52,8 @@ namespace Moonlight // 게임 이름 공간
             { // 시도 시작
                 var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath(slot))); // 저장 자료 읽기
                 if (data == null || data.version != 1 || data.state == null) throw new Exception("지원하지 않는 저장 데이터"); // 저장 형식 확인
-                game = data.state; controller.enabled = false; transform.position = new Vector3(data.x, data.y, data.z); controller.enabled = true; // 상태와 위치 복원
-                yaw = data.yaw; pitch = data.pitch; panel = ""; message = "불러오기 완료: " + slot; // 시점과 화면 복원
+                game = data.state; game.EnsureMembership(); controller.enabled = false; transform.position = new Vector3(data.x, data.y, data.z); controller.enabled = true; // 상태와 위치 복원
+                yaw = data.yaw; pitch = data.pitch; panel = ""; announcedRank = game.Member.Rank; message = "불러오기 완료: " + slot; // 시점과 화면 복원
             } // 시도 끝
             catch (Exception ex) { message = "불러오기 실패: " + ex.Message; } // 오류 표시
         } // 불러오기 끝
@@ -71,6 +72,11 @@ namespace Moonlight // 게임 이름 공간
             } // 정지 전환 끝
             if (panel == "pause") { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; return; } // 정지 중 시계 중단
             if (!game.GameOver && !game.Escaped) Advance(Time.deltaTime * settings.minutesPerSecond); // 연속 시계 진행
+            if (game.Member.Rank > announcedRank) // 승급 안내 확인
+            { // 승급 안내 시작
+                announcedRank = game.Member.Rank; // 안내 등급 갱신
+                message = "실버 승급! 최초 보너스 " + settings.silverBonus.ToString("N0") + "칩 지급"; // 승급 결과 표시
+            } // 승급 안내 끝
             if (keyboard.f5Key.wasPressedThisFrame) Save("manual"); // 수동 저장 단축키
             if (keyboard.f9Key.wasPressedThisFrame) Load("manual"); // 수동 불러오기 단축키
             bool free = panel == "" && !game.GameOver && !game.Escaped; // 이동 가능 여부
@@ -103,7 +109,7 @@ namespace Moonlight // 게임 이름 공간
             if (eventName == "work_done") // 업무 완료 확인
             { // 업무 완료 시작
                 Save("event"); // 업무 완료 저장
-                message = "업무 완료: " + settings.workReward.ToString("N0") + "칩"; // 보상 안내
+                message = "업무 완료: 보수와 경험치 지급"; // 보상 안내
             } // 업무 완료 끝
         } // 이벤트 처리 끝
         void Interact() // 가까운 장소 이용
@@ -134,8 +140,8 @@ namespace Moonlight // 게임 이름 공간
                 label = new GUIStyle(GUI.skin.label) { font = font, fontSize = 18, wordWrap = true }; label.normal.textColor = Color.white; // 본문 스타일
                 button = new GUIStyle(GUI.skin.button) { font = font, fontSize = 18 }; // 버튼 스타일
             } // 글꼴 생성 끝
-            GUI.Box(new Rect(10, 10, 600, 150), ""); // HUD 배경
-            GUI.Label(new Rect(20, 18, 580, 140), "칩: " + game.Chips.ToString("N0") + "   빚: " + game.Debt.ToString("N0") + "\n다음 청구 예상: " + game.PreviewBill(settings).ToString("N0") + "   남은 시간: " + Math.Max(0, (game.NextBill - game.Minutes) / 60).ToString("F1") + "시간\n" + message + "\nWASD 이동 · 마우스 시점 · E 상호작용 · Esc 메뉴", label); // 핵심 정보 표시
+            GUI.Box(new Rect(10, 10, 650, 175), ""); // HUD 배경
+            GUI.Label(new Rect(20, 18, 630, 165), "칩: " + game.Chips.ToString("N0") + "   빚: " + game.Debt.ToString("N0") + "\n등급: " + (game.Member.Rank == 0 ? "브론즈" : "실버") + "   누적: " + game.Member.Experience + " EXP   게임 주기: " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap + " EXP\n다음 청구 예상: " + game.PreviewBill(settings).ToString("N0") + "   남은 시간: " + Math.Max(0, (game.NextBill - game.Minutes) / 60).ToString("F1") + "시간\n" + message + "\nWASD 이동 · 마우스 시점 · E 상호작용 · Esc 메뉴", label); // 핵심 정보 표시
             if (game.GameOver || game.Escaped) panel = "end"; // 종료 화면 전환
             if (panel == "") // 주변 안내 표시 여부
             { // 주변 안내 시작
@@ -148,6 +154,14 @@ namespace Moonlight // 게임 이름 공간
             { // 업무 화면 시작
                 GUILayout.Label("호텔 업무: " + settings.workMinutes + "분 / 보수 " + settings.workReward.ToString("N0") + "칩", label); // 업무 조건
                 if (GUILayout.Button("업무 시작", button) && !game.WorkActive) { game.StartWork(settings); panel = ""; Save("event"); } // 업무 시작
+                if (game.Member.Rank >= 1 && GUILayout.Button("실버 업무 시작: " + settings.silverWorkReward.ToString("N0") + "칩", button)) // 실버 업무 선택
+                { // 실버 업무 선택 시작
+                    if (game.StartSilverWork(settings)) // 업무 시작 가능 확인
+                    { // 업무 시작 처리
+                        panel = ""; // 업무 화면 닫기
+                        Save("event"); // 업무 시작 저장
+                    } // 업무 시작 끝
+                } // 실버 업무 선택 끝
             } // 업무 화면 끝
             if (panel == "blackjack") DrawBlackjack(); // 블랙잭 화면
             if (panel == "cashier") // 정산 화면

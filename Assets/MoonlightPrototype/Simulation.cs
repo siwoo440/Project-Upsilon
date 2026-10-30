@@ -4,12 +4,26 @@ namespace Moonlight // 게임 이름 공간
 { // 이름 공간 시작
     [Serializable] public class GameSettings // 조정 가능한 임시 설정
     { // 설정 시작
-        public long startingChips = 5000000, startingDebt = 1000000000, minimumBill = 20000000; // 초기 경제 수치
+        public long startingChips = 10000000, startingDebt = 1000000000, minimumBill = 20000000; // 초기 경제 수치
         public long workReward = 4000000, minBet = 1000000, maxBet = 20000000; // 업무와 베팅 수치
         public float minutesPerSecond = 2, billingHours = 72, workMinutes = 120; // 시간 수치
         public int decks = 1; // 카드 덱 수
         public bool dealerHitsSoft17 = false; // 소프트 17 규칙
+        public int workExperience = 10, gameExperience = 2, npcExperience = 5, billExperience = 30, cycleGameCap = 60; // 활동별 경험치 가안
+        public int silverRequiredExperience = 100, silverRequiredBills = 1; // 실버 승급 조건
+        public long silverBonus = 20000000, silverWorkReward = 8000000; // 실버 보너스와 업무 보수
+        public int goldRequiredExperience = 300, platinumRequiredExperience = 700, diamondRequiredExperience = 1200; // 후속 등급 경험치 가안
+        public int goldRequiredBills = 3, platinumRequiredBills = 6, diamondRequiredBills = 9; // 후속 등급 청구 조건
+        public long goldBonus = 50000000, platinumBonus = 100000000, diamondBonus = 200000000; // 후속 등급 보너스
+        public int silverRoomDiscount = 5, goldRoomDiscount = 10, platinumRoomDiscount = 15, diamondRoomDiscount = 20; // 후속 숙박 할인율
+        public int requestExperience = 20, specialRequestExperience = 40, examExperience = 20; // 후속 활동 경험치 가안
     } // 설정 끝
+    [Serializable] public class Membership // 회원 저장 상태
+    { // 회원 상태 시작
+        public int Rank, Experience, CycleGameExperience; // 등급과 누적 경험치
+        public bool BronzeBonusPaid = true, SilverBonusPaid, GoldBonusPaid, PlatinumBonusPaid, DiamondBonusPaid; // 등급별 보너스 지급 상태
+        public bool GoldExamCompleted, SpecialRequestCompleted, InvitationCompleted, SilverFacilityUnlocked; // 시험과 시설 해금 상태
+    } // 회원 상태 끝
     [Serializable] public class Round // 블랙잭 진행 상태
     { // 라운드 시작
         public int phase; // 단계: 대기 0, 선택 1, 완료 2
@@ -74,7 +88,9 @@ namespace Moonlight // 게임 이름 공간
                 if (game.WorkRemaining == 0 && game.WorkActive) // 업무 완료 확인
                 { // 보상 처리 시작
                     game.WorkActive = false; // 업무 완료 표시
-                    game.Chips = checked(game.Chips + settings.workReward); // 확정 보상 지급
+                    game.Chips = checked(game.Chips + (game.WorkSilver ? settings.silverWorkReward : settings.workReward)); // 확정 보상 지급
+                    game.WorkSilver = false; // 업무 종류 초기화
+                    game.AwardWorkExperience(settings); // 업무 경험치 지급
                     notify?.Invoke("work_done"); // 업무 완료 알림
                 } // 보상 처리 끝
                 if (step == 0 && game.Minutes < game.NextBill) // 진행 불가 확인
@@ -90,7 +106,8 @@ namespace Moonlight // 게임 이름 공간
         public int BillCount; // 완료한 청구 횟수
         public double Minutes, NextBill, WorkRemaining; // 게임 시각과 일정
         public uint RandomState = 2463534242; // 저장 가능한 난수 상태
-        public bool GameOver, Escaped, WorkActive; // 종료와 업무 상태
+        public bool GameOver, Escaped, WorkActive, WorkSilver; // 종료와 업무 상태
+        public Membership Member = new Membership(); // 회원 등급 저장 상태
         public Round Round = new Round(); // 현재 블랙잭
         public GameState() { } // 직렬화용 생성자
         public GameState(GameSettings settings) // 새 게임 생성
@@ -99,6 +116,50 @@ namespace Moonlight // 게임 이름 공간
             Debt = settings.startingDebt; // 시작 빚 설정
             NextBill = settings.billingHours * 60; // 첫 청구 시각 설정
         } // 생성 끝
+        public void EnsureMembership() // 기존 저장 자료 호환
+        { // 회원 상태 확인 시작
+            if (Member == null) // 회원 정보 누락 확인
+            { // 기본 상태 시작
+                Member = new Membership(); // 기존 저장의 기본 등급
+            } // 기본 상태 끝
+        } // 회원 상태 확인 끝
+        public void CheckPromotion(GameSettings settings) // 실버 승급 검사
+        { // 승급 검사 시작
+            EnsureMembership(); // 회원 상태 보장
+            if (!GameOver && Member.Rank == 0 && Member.Experience >= settings.silverRequiredExperience && BillCount >= settings.silverRequiredBills) // 실버 조건 확인
+            { // 승급 시작
+                Member.Rank = 1; // 실버 등급 부여
+                Member.SilverFacilityUnlocked = true; // 실버 시설 해금
+                if (!Member.SilverBonusPaid) // 최초 보너스 확인
+                { // 보너스 지급 시작
+                    Member.SilverBonusPaid = true; // 보너스 지급 기록
+                    Chips = checked(Chips + settings.silverBonus); // 승급 칩 지급
+                } // 보너스 지급 끝
+            } // 승급 끝
+        } // 승급 검사 끝
+        public void AwardWorkExperience(GameSettings settings) // 업무 경험치 지급
+        { // 업무 경험치 시작
+            EnsureMembership(); // 회원 상태 보장
+            Member.Experience += settings.workExperience; // 누적 경험치 증가
+            CheckPromotion(settings); // 승급 조건 확인
+        } // 업무 경험치 끝
+        public void AwardGameExperience(GameSettings settings) // 게임 경험치 지급
+        { // 게임 경험치 시작
+            EnsureMembership(); // 회원 상태 보장
+            int amount = Math.Max(0, Math.Min(settings.gameExperience, settings.cycleGameCap - Member.CycleGameExperience)); // 주기 한도 적용
+            Member.Experience += amount; // 누적 경험치 증가
+            Member.CycleGameExperience += amount; // 주기 경험치 증가
+            CheckPromotion(settings); // 승급 조건 확인
+        } // 게임 경험치 끝
+        public bool StartSilverWork(GameSettings settings) // 실버 업무 시작
+        { // 실버 업무 시작 범위
+            EnsureMembership(); // 회원 상태 보장
+            if (Member.Rank < 1 || WorkActive) return false; // 등급과 진행 상태 확인
+            WorkSilver = true; // 실버 업무 기록
+            WorkRemaining = settings.workMinutes; // 업무 시간 설정
+            WorkActive = true; // 업무 진행 표시
+            return true; // 시작 결과 반환
+        } // 실버 업무 시작 끝
         public long PreviewBill(GameSettings settings) // 다음 청구액 계산
         { // 청구 계산 시작
             int tier = Math.Min(BillCount / 3, 4); // 회차별 요율 구간
@@ -117,6 +178,10 @@ namespace Moonlight // 게임 이름 공간
             if (Chips < due) { GameOver = true; return false; } // 납부 불가 처리
             Chips -= due; // 확정 칩 납부
             Debt -= due; // 빚 감소
+            EnsureMembership(); // 회원 상태 보장
+            Member.CycleGameExperience = 0; // 새 청구 주기 초기화
+            Member.Experience += settings.billExperience; // 청구 납부 경험치
+            CheckPromotion(settings); // 납부 후 승급 판정
             if (Debt == 0 && Loan == 0) Escaped = true; // 전액 상환 탈출
             return true; // 납부 성공 반환
         } // 정산 끝
@@ -191,6 +256,7 @@ namespace Moonlight // 게임 이름 공간
             Round.phase = 2; // 지급 전 완료 상태 확정
             Chips = checked(Chips + payout); // 보상 지급
             Round.wager = 0; // 예약 칩 해제
+            AwardGameExperience(settings); // 정산 완료 경험치 지급
         } // 결과 처리 끝
     } // 상태 끝
 } // 이름 공간 끝

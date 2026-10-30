@@ -124,5 +124,34 @@ class Program // 검증 실행기
         GameClock.Advance(flow, flowSettings, 58, null); // 첫 청구까지 진행
         Check(!flow.GameOver && flow.BillCount == 1, "통합 흐름 청구 납부"); // 정기 청구 확인
         Check(flow.RepayAll() && flow.Escaped, "통합 흐름 전액 상환 탈출"); // 최종 탈출 확인
+        var memberSettings = new GameSettings(); // 회원 검증 설정
+        var member = new GameState(memberSettings); // 새 회원 상태
+        Check(member.Chips == 10000000 && member.Member.Rank == 0, "브론즈 시작 칩"); // 시작 등급 확인
+        member.Member.Experience = 70; member.Chips = 122400000; // 청구 후 승급 조건 설정
+        Check(member.SettleBill(memberSettings) && member.Member.Rank == 1 && member.Member.Experience == 100 && member.Chips == 20000000, "첫 청구 후 실버 승급"); // 승급 순서 확인
+        var failedMember = new GameState(memberSettings); failedMember.Member.Experience = 100; failedMember.Chips = 0; // 납부 실패 상태
+        Check(!failedMember.SettleBill(memberSettings) && failedMember.Member.Rank == 0 && failedMember.Chips == 0, "납부 실패 시 승급 보너스 차단"); // 실패 순서 확인
+        var capMember = new GameState(memberSettings); // 주기 한도 검증 상태
+        for (int i = 0; i < 40; i++) capMember.AwardGameExperience(memberSettings); // 게임 경험치 반복
+        Check(capMember.Member.Experience == 60 && capMember.Member.CycleGameExperience == 60, "게임 경험치 주기 한도"); // 한도 확인
+        capMember.Chips = 122400000; capMember.SettleBill(memberSettings); capMember.AwardGameExperience(memberSettings); // 청구 뒤 경험치 지급
+        Check(capMember.Member.CycleGameExperience == 2 && capMember.Member.Experience == 92, "청구 주기 경험치 초기화"); // 초기화 확인
+        var memberJson = JsonSerializer.Serialize(member, options); // 승급 상태 저장
+        var memberLoaded = JsonSerializer.Deserialize<GameState>(memberJson, options); // 승급 상태 복구
+        long memberChips = memberLoaded.Chips; memberLoaded.CheckPromotion(memberSettings); // 재판정
+        Check(memberLoaded.Chips == memberChips && memberLoaded.Member.SilverBonusPaid, "복구 후 보너스 중복 방지"); // 보너스 확인
+        var activity = new GameState(memberSettings); // 활동 경험치 검증 상태
+        activity.StartWork(memberSettings); GameClock.Advance(activity, memberSettings, memberSettings.workMinutes, null); // 업무 완료
+        Check(activity.Member.Experience == 10, "업무 확정 경험치"); // 업무 경험치 확인
+        activity.StartBlackjack(memberSettings, memberSettings.minBet); // 블랙잭 시작
+        if (activity.Round.phase == 1) activity.Stand(memberSettings); // 진행 중이면 정산
+        Check(activity.Member.Experience == 12 && activity.Member.CycleGameExperience == 2, "블랙잭 정산 경험치"); // 게임 경험치 확인
+        activity.Stand(memberSettings); // 중복 정산 시도
+        Check(activity.Member.Experience == 12, "게임 경험치 중복 방지"); // 중복 경험치 확인
+        var oldSave = new GameState(memberSettings); oldSave.Member = null; oldSave.EnsureMembership(); // 기존 저장 복구
+        Check(oldSave.Member.Rank == 0 && oldSave.Member.Experience == 0, "기존 저장 회원 상태 기본값"); // 기존 저장 호환 확인
+        Check(memberLoaded.StartSilverWork(memberSettings), "실버 업무 해금"); // 실버 업무 시작 확인
+        long silverStart = memberLoaded.Chips; GameClock.Advance(memberLoaded, memberSettings, memberSettings.workMinutes, null); // 실버 업무 완료
+        Check(memberLoaded.Chips == silverStart + memberSettings.silverWorkReward, "실버 업무 보상"); // 실버 보수 확인
     } // 검증 범위 끝
 } // 실행기 끝
