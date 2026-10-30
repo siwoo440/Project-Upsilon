@@ -42,7 +42,7 @@ class Program // 검증 실행기
         Check(repay.RepayAll() && repay.Escaped && repay.Chips == 0, "대출 포함 전액 상환"); // 조기 탈출 확인
         Check(MapLayout.Nearest(-5, 4) == "luna", "루나 위치 선택"); // 루나 대상 확인
         Check(MapLayout.Nearest(-7, -3) == "work", "업무 위치 선택"); // 업무 대상 확인
-        Check(MapLayout.Nearest(1, 5) == "blackjack", "블랙잭 위치 선택"); // 게임 대상 확인
+        Check(MapLayout.Nearest(1, 2.9f) == "blackjack", "블랙잭 의자 위치 선택"); // 착석 대상 확인
         Check(MapLayout.Nearest(7, 2) == "cashier", "정산 위치 선택"); // 정산 대상 확인
         Check(MapLayout.Nearest(0, -17) == "", "먼 거리 상호작용 차단"); // 거리 제한 확인
         Check(MenuState.TogglePause("blackjack", "") == "pause", "진행 화면에서 일시정지"); // 일시정지 확인
@@ -164,5 +164,21 @@ class Program // 검증 실행기
         Check(Movement.Speed(movementSettings, true) == 7, "달리기 속도"); // 달리기 속도 확인
         movementSettings.runSpeed = 9; // 달리기 속도 변경
         Check(Movement.Speed(movementSettings, true) == 9, "달리기 설정 반영"); // 설정 변경 확인
+        var seating = new GameState(settings); // 착석 검증 상태
+        Check(seating.SitAtBlackjack() && seating.Seated, "블랙잭 착석"); // 착석 상태 확인
+        seating.Round.phase = 1; // 진행 중 라운드 설정
+        Check(!seating.LeaveBlackjack() && seating.Seated, "진행 중 이탈 차단"); // 진행 중 이탈 확인
+        seating.Round.phase = 2; // 정산 완료 상태 설정
+        Check(seating.LeaveBlackjack() && !seating.Seated, "정산 후 일어나기"); // 일어나기 확인
+        var seatedGame = new GameState(settings); // 착석 중 청구 검증 상태
+        seatedGame.Chips = 200000000; seatedGame.SitAtBlackjack(); // 착석과 청구 자금 설정
+        seatedGame.Round = new Round { phase = 1, wager = 1000000, player = new System.Collections.Generic.List<int> { 10, 8 }, dealer = new System.Collections.Generic.List<int> { 10, 8 } }; // 진행 중 카드 설정
+        seatedGame.NextBill = 1; // 청구 시각 설정
+        GameClock.Advance(seatedGame, settings, 1, null); // 착석 중 청구 진행
+        Check(seatedGame.Seated && seatedGame.Round.wager == 1000000 && seatedGame.Round.phase == 1, "착석 중 청구 후 게임 유지"); // 착석과 베팅 유지 확인
+        var seatedRestore = JsonSerializer.Deserialize<GameState>(JsonSerializer.Serialize(seatedGame, options), options); // 착석 게임 저장 복구
+        Check(seatedRestore.Seated && seatedRestore.Round.wager == 1000000 && !seatedRestore.LeaveBlackjack(), "착석과 베팅 복구"); // 저장 복구와 이탈 제한 확인
+        long beforeSettlement = seatedRestore.Chips; seatedRestore.Stand(settings); seatedRestore.Stand(settings); // 무승부와 중복 정산 시도
+        Check(seatedRestore.Chips == beforeSettlement + 1000000 && seatedRestore.LeaveBlackjack(), "복구 게임 단일 정산 후 퇴장"); // 중복 지급 방지 확인
     } // 검증 범위 끝
 } // 실행기 끝

@@ -28,7 +28,7 @@ namespace Moonlight // 게임 이름 공간
             float best = float.MaxValue; // 최근접 거리 초기화
             Check(x, z, -5, 4, 3, "luna", ref result, ref best); // 루나 거리 확인
             Check(x, z, -7, -3, 3, "work", ref result, ref best); // 업무 거리 확인
-            Check(x, z, 1, 5, 3.5f, "blackjack", ref result, ref best); // 블랙잭 거리 확인
+            Check(x, z, 1, 2.9f, 1.8f, "blackjack", ref result, ref best); // 블랙잭 의자 거리 확인
             Check(x, z, 7, 2, 3, "cashier", ref result, ref best); // 정산 거리 확인
             return result; // 선택 결과 반환
         } // 탐색 끝

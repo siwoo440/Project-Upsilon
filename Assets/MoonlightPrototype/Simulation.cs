@@ -114,7 +114,7 @@ namespace Moonlight // 게임 이름 공간
         public int BillCount; // 완료한 청구 횟수
         public double Minutes, NextBill, WorkRemaining; // 게임 시각과 일정
         public uint RandomState = 2463534242; // 저장 가능한 난수 상태
-        public bool GameOver, Escaped, WorkActive, WorkSilver; // 종료와 업무 상태
+        public bool GameOver, Escaped, WorkActive, WorkSilver, Seated; // 종료와 착석 상태
         public Membership Member = new Membership(); // 회원 등급 저장 상태
         public Round Round = new Round(); // 현재 블랙잭
         public GameState() { } // 직렬화용 생성자
@@ -131,6 +131,18 @@ namespace Moonlight // 게임 이름 공간
                 Member = new Membership(); // 기존 저장의 기본 등급
             } // 기본 상태 끝
         } // 회원 상태 확인 끝
+        public bool SitAtBlackjack() // 블랙잭 착석
+        { // 착석 시작
+            if (GameOver || Escaped) return false; // 게임 종료 상태 확인
+            Seated = true; // 착석 상태 기록
+            return true; // 착석 성공
+        } // 착석 끝
+        public bool LeaveBlackjack() // 블랙잭 자리에서 일어나기
+        { // 일어나기 시작
+            if (Round.phase == 1) return false; // 진행 중 라운드 이탈 제한
+            Seated = false; // 착석 상태 해제
+            return true; // 일어나기 성공
+        } // 일어나기 끝
         public void CheckPromotion(GameSettings settings) // 실버 승급 검사
         { // 승급 검사 시작
             EnsureMembership(); // 회원 상태 보장

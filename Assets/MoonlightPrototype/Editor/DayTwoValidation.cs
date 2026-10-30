@@ -73,9 +73,10 @@ public static class DayTwoValidation // 이동 경로 검증 도구
         original.Chips = 10000000; // 검증용 보유 칩
         original.StartWork(settings); // 진행 중 업무 시작
         original.StartBlackjack(settings, 1000000); // 블랙잭 라운드 시작
+        original.SitAtBlackjack(); // 저장 전 착석
         string json = JsonUtility.ToJson(original); // 유니티 저장 형식 변환
         GameState restored = JsonUtility.FromJson<GameState>(json); // 저장 상태 복구
-        if (restored.Chips != original.Chips || restored.WorkActive != original.WorkActive || restored.WorkRemaining != original.WorkRemaining || restored.RandomState != original.RandomState || restored.Round.wager != original.Round.wager || restored.Round.phase != original.Round.phase || restored.Round.shoe.Count != original.Round.shoe.Count) // 복구 상태 비교
+        if (restored.Chips != original.Chips || restored.WorkActive != original.WorkActive || restored.WorkRemaining != original.WorkRemaining || restored.RandomState != original.RandomState || restored.Round.wager != original.Round.wager || restored.Round.phase != original.Round.phase || restored.Round.shoe.Count != original.Round.shoe.Count || !restored.Seated) // 복구 상태 비교
         { // 복구 실패 시작
             throw new Exception("Unity 저장 상태 복구 실패"); // 실패 알림
         } // 복구 실패 끝

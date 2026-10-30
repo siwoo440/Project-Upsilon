@@ -16,6 +16,7 @@ namespace Moonlight // 게임 이름 공간
         GameState game; // 현재 게임 상태
         CharacterController controller; // 이동 충돌 처리
         Camera view; // 플레이어 카메라
+        BlackjackVisuals tableVisuals; // 테이블 카드 표현
         float yaw, pitch; // 시점 회전
         string panel = "", message = "루나에게 안내를 받은 뒤 업무와 블랙잭을 이용하세요."; // 현재 화면과 안내
         string previousPanel = ""; // 일시정지 전 화면
@@ -31,6 +32,7 @@ namespace Moonlight // 게임 이름 공간
             cameraObject.transform.SetParent(transform); cameraObject.transform.localPosition = new Vector3(0, 1.6f, 0); // 시점 높이
             view = cameraObject.AddComponent<Camera>(); cameraObject.AddComponent<AudioListener>(); // 카메라 활성화
             CasinoMap.Build(); // 카지노 공간 생성
+            tableVisuals = gameObject.AddComponent<BlackjackVisuals>(); // 카드 표시 구성
             game = new GameState(settings); // 새 게임 생성
             transform.position = new Vector3(0, 0.1f, -18); // 입구 위치
             Save("start"); // 시작 자동 저장
@@ -53,7 +55,8 @@ namespace Moonlight // 게임 이름 공간
                 var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath(slot))); // 저장 자료 읽기
                 if (data == null || data.version != 1 || data.state == null) throw new Exception("지원하지 않는 저장 데이터"); // 저장 형식 확인
                 game = data.state; game.EnsureMembership(); controller.enabled = false; transform.position = new Vector3(data.x, data.y, data.z); controller.enabled = true; // 상태와 위치 복원
-                yaw = data.yaw; pitch = data.pitch; panel = ""; announcedRank = game.Member.Rank; message = "불러오기 완료: " + slot; // 시점과 화면 복원
+                yaw = data.yaw; pitch = data.pitch; panel = game.Seated ? "blackjack" : ""; announcedRank = game.Member.Rank; message = "불러오기 완료: " + slot; // 시점과 화면 복원
+                UpdateCameraPose(); // 착석 시점 복원
             } // 시도 끝
             catch (Exception ex) { message = "불러오기 실패: " + ex.Message; } // 오류 표시
         } // 불러오기 끝
@@ -70,8 +73,10 @@ namespace Moonlight // 게임 이름 공간
                 } // 이전 화면 보관 끝
                 panel = nextPanel; // 화면 전환 적용
             } // 정지 전환 끝
+            tableVisuals.Paused = panel == "pause"; // 카드 연출 정지 상태
             if (panel == "pause") { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; return; } // 정지 중 시계 중단
             if (!game.GameOver && !game.Escaped) Advance(Time.deltaTime * settings.minutesPerSecond); // 연속 시계 진행
+            tableVisuals.Sync(game); // 카드와 베팅 표시 갱신
             if (game.Member.Rank > announcedRank) // 승급 안내 확인
             { // 승급 안내 시작
                 announcedRank = game.Member.Rank; // 안내 등급 갱신
@@ -122,6 +127,11 @@ namespace Moonlight // 게임 이름 공간
                 message = "가까운 장소에서 E를 누르세요."; // 거리 안내
                 return; // 상호작용 중단
             } // 거리 안내 끝
+            if (target == "blackjack" && game.SitAtBlackjack()) // 블랙잭 착석 확인
+            { // 착석 처리 시작
+                UpdateCameraPose(); // 테이블 시점 적용
+                Save("event"); // 착석 자동 저장
+            } // 착석 처리 끝
             panel = target; // 대상 화면 열기
         } // 상호작용 끝
         string NearbyLabel() // 주변 대상 안내
@@ -129,7 +139,7 @@ namespace Moonlight // 게임 이름 공간
             string target = MapLayout.Nearest(transform.position.x, transform.position.z); // 최근접 대상 확인
             if (target == "luna") return "E: 루나와 대화"; // 루나 안내
             if (target == "work") return "E: 호텔 업무"; // 업무 안내
-            if (target == "blackjack") return "E: 블랙잭"; // 게임 안내
+            if (target == "blackjack") return "E: 블랙잭 의자에 앉기"; // 게임 안내
             if (target == "cashier") return "E: 정산 창구"; // 정산 안내
             return ""; // 주변 대상 없음
         } // 안내 끝
@@ -150,7 +160,8 @@ namespace Moonlight // 게임 이름 공간
                 GUI.Label(new Rect(Screen.width / 2 - 110, Screen.height - 65, 250, 35), NearbyLabel(), label); // 상호작용 안내
                 return; // 열린 화면 없음
             } // 주변 안내 끝
-            GUILayout.BeginArea(new Rect(Screen.width / 2 - 270, 180, 540, 470), GUI.skin.box); // 중앙 대화 상자
+            Rect panelRect = panel == "blackjack" ? new Rect(Screen.width - 310, 210, 300, 460) : new Rect(Screen.width / 2 - 270, 210, 540, 470); // 게임 화면 위치
+            GUILayout.BeginArea(panelRect, GUI.skin.box); // 대화 상자 시작
             if (panel == "luna") GUILayout.Label("루나: 21에 가까운 쪽이 이겨요. A는 1 또는 11입니다. 히트로 카드를 받고 스탠드로 멈추세요.", label); // 루나 안내
             if (panel == "work") // 업무 화면
             { // 업무 화면 시작
@@ -181,9 +192,40 @@ namespace Moonlight // 게임 이름 공간
                 if (GUILayout.Button("시작 지점 불러오기", button)) Load("start"); // 시작 복구
                 if (GUILayout.Button("최근 이벤트 불러오기", button)) Load("event"); // 이벤트 복구
             } // 저장 메뉴 끝
-            if (panel != "end" && GUILayout.Button("닫기", button)) panel = ""; // 화면 닫기
+            if (panel != "end" && GUILayout.Button(panel == "blackjack" ? "일어나기" : "닫기", button)) // 화면 닫기 선택
+            { // 화면 닫기 시작
+                if (panel == "pause") // 일시정지 닫기 확인
+                { // 정지 해제 시작
+                    panel = previousPanel; // 이전 화면 복원
+                } // 정지 해제 끝
+                else if (panel != "blackjack" || game.LeaveBlackjack()) // 라운드 이탈 가능 여부
+                { // 화면 종료 시작
+                    bool leavingTable = panel == "blackjack"; // 테이블 퇴장 확인
+                    panel = ""; // 화면 닫기
+                    UpdateCameraPose(); // 이동 시점 복원
+                    if (leavingTable) Save("event"); // 테이블 퇴장 저장
+                } // 화면 종료 끝
+                else // 진행 중 게임 확인
+                { // 이탈 제한 시작
+                    message = "라운드가 끝난 뒤 일어날 수 있습니다."; // 이탈 제한 안내
+                } // 이탈 제한 끝
+            } // 화면 닫기 끝
             GUILayout.EndArea(); // 대화 상자 끝
         } // 화면 끝
+        void UpdateCameraPose() // 착석과 이동 시점 전환
+        { // 시점 변경 시작
+            if (game.Seated) // 착석 상태 확인
+            { // 착석 시점 시작
+                view.transform.position = new Vector3(1, 1.55f, 2.9f); // 의자 시점 위치
+                view.transform.rotation = Quaternion.LookRotation(new Vector3(1, 0.9f, 5) - view.transform.position); // 테이블 바라보기
+            } // 착석 시점 끝
+            else // 이동 상태 확인
+            { // 이동 시점 시작
+                view.transform.localPosition = new Vector3(0, 1.6f, 0); // 플레이어 시점 위치
+                transform.rotation = Quaternion.Euler(0, yaw, 0); // 저장된 몸 방향
+                view.transform.localRotation = Quaternion.Euler(pitch, 0, 0); // 저장된 시점 각도
+            } // 이동 시점 끝
+        } // 시점 변경 끝
         string CardNames(System.Collections.Generic.List<int> cards) // 카드 이름 표시
         { // 카드 이름 변환 시작
             string[] names = new string[cards.Count]; // 표시 이름 목록
