@@ -57,5 +57,20 @@ class Program // 검증 실행기
         simultaneous.Chips = 0; simultaneous.NextBill = settings.workMinutes; simultaneous.StartWork(settings); // 업무와 청구 시각 일치
         GameClock.Advance(simultaneous, settings, settings.workMinutes, null); // 동시 시각까지 진행
         Check(simultaneous.GameOver && simultaneous.Chips == 0, "청구 시 미확정 업무 보상 제외"); // 청구 우선 확인
+        for (int tier = 0; tier < 5; tier++) // 이자 구간 반복
+        { // 구간 검증 시작
+            var tierGame = new GameState(settings); // 구간별 청구 상태
+            tierGame.BillCount = tier * 3; // 청구 회차 설정
+            long expectedDebt = 1000000000L + 1000000000L * (2 + tier) / 100; // 이자 포함 빚
+            long expectedBill = expectedDebt * (12 + tier * 2) / 100; // 구간별 청구액
+            Check(tierGame.PreviewBill(settings) == expectedBill, "이자 구간 " + (tier + 1)); // 구간 청구액 확인
+        } // 구간 검증 끝
+        var pendingBet = new GameState(settings); // 청구 중 게임 상태
+        pendingBet.Chips = 200000000; // 청구와 베팅 자금
+        pendingBet.Chips -= 1000000; // 베팅 칩 분리
+        pendingBet.Round = new Round { phase = 1, wager = 1000000 }; // 진행 중 베팅 설정
+        pendingBet.NextBill = 1; // 빠른 청구 시각
+        GameClock.Advance(pendingBet, settings, 1, null); // 청구 시각 진행
+        Check(!pendingBet.GameOver && pendingBet.Round.wager == 1000000 && pendingBet.Round.phase == 1, "납부 후 베팅 유지"); // 베팅 지속 확인
     } // 검증 범위 끝
 } // 실행기 끝
