@@ -72,7 +72,10 @@ namespace Moonlight // 게임 이름 공간
             } // 베팅 칩 끝
             if (game.Round.wager == 0 && token != null) // 베팅 정산 확인
             { // 베팅 제거 시작
-                Destroy(token); // 정산된 칩 제거
+                token.transform.SetParent(null, true); // 라운드 묶음에서 칩 분리
+                TokenSettlementMotion motion = token.AddComponent<TokenSettlementMotion>(); // 정산 칩 연출 추가
+                motion.Owner = this; // 일시정지 상태 연결
+                motion.Target = token.transform.position + new Vector3(0, 0, game.Round.result == "패배" ? 0.65f : -0.65f); // 결과별 칩 이동 방향
                 token = null; // 칩 상태 초기화
             } // 베팅 제거 끝
         } // 동기화 끝
@@ -123,4 +126,20 @@ namespace Moonlight // 게임 이름 공간
             transform.position = Vector3.MoveTowards(transform.position, Target, Time.deltaTime * 2); // 목적지로 카드 이동
         } // 연출 갱신 끝
     } // 연출 끝
+    public class TokenSettlementMotion : MonoBehaviour // 정산 칩 이동 연출
+    { // 칩 연출 시작
+        public BlackjackVisuals Owner; // 연출 정지 상태 소유자
+        public Vector3 Target; // 칩 목적지
+        void Update() // 매 프레임 연출
+        { // 이동 시작
+            if (Owner == null) // 테이블 종료 확인
+            { // 종료 처리 시작
+                Destroy(gameObject); // 남은 칩 정리
+                return; // 이동 중단
+            } // 종료 처리 끝
+            if (Owner.Paused) return; // 일시정지 확인
+            transform.position = Vector3.MoveTowards(transform.position, Target, Time.deltaTime * 1.5f); // 칩 이동
+            if (Vector3.Distance(transform.position, Target) < 0.001f) Destroy(gameObject); // 이동 완료 칩 제거
+        } // 이동 끝
+    } // 칩 연출 끝
 } // 이름 공간 끝

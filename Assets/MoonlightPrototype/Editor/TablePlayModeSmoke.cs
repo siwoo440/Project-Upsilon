@@ -58,6 +58,7 @@ public static class TablePlayModeSmoke // 플레이 모드 검증
             BlackjackVisuals visuals = player.GetComponent<BlackjackVisuals>(); // 카드 표시 구성 확인
             FieldInfo groupField = typeof(BlackjackVisuals).GetField("group", BindingFlags.Instance | BindingFlags.NonPublic); // 카드 묶음 필드
             GameObject priorGroup = (GameObject)groupField.GetValue(visuals); // 기존 카드 묶음 보관
+            GameObject wagerToken = GameObject.Find("베팅 칩"); // 베팅 칩 보관
             game.Round.player.Add(2); // 히트 카드 추가
             visuals.Sync(game); // 변경된 카드 표시
             if (!ReferenceEquals(priorGroup, groupField.GetValue(visuals))) throw new Exception("히트할 때 기존 카드가 다시 생성되었습니다."); // 기존 카드 유지 확인
@@ -70,8 +71,16 @@ public static class TablePlayModeSmoke // 플레이 모드 검증
             typeof(Prototype).GetMethod("Load", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(player, new object[] { "manual" }); // 실제 수동 불러오기 실행
             game = (GameState)field.GetValue(player); // 불러온 상태 확인
             if (!game.Seated || game.Round.wager != 100 || Vector3.Distance(camera.transform.position, new Vector3(1, 1.55f, 2.9f)) > 0.01f) throw new Exception("수동 저장의 착석 복구 실패"); // 파일 복구 확인
+            visuals.Sync(game); // 복구된 베팅 표시
+            wagerToken = (GameObject)typeof(BlackjackVisuals).GetField("token", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(visuals); // 복구된 칩 확인
             game.Stand(new GameSettings()); // 진행 중 라운드 정산
             visuals.Sync(game); // 정산 결과를 테이블에 반영
+            if (wagerToken.GetComponent<TokenSettlementMotion>() == null) throw new Exception("정산 칩 이동 연출이 없습니다."); // 정산 칩 연출 확인
+            Vector3 pausedToken = wagerToken.transform.position; // 정지 전 칩 위치
+            visuals.Paused = true; // 연출 일시정지
+            typeof(TokenSettlementMotion).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(wagerToken.GetComponent<TokenSettlementMotion>(), null); // 정지 중 이동 시도
+            if (wagerToken.transform.position != pausedToken) throw new Exception("정지 중 칩이 이동했습니다."); // 정지 상태 확인
+            visuals.Paused = false; // 연출 재개
             FieldInfo dealerField = typeof(BlackjackVisuals).GetField("dealerCards", BindingFlags.Instance | BindingFlags.NonPublic); // 딜러 카드 목록 필드
             var displayedDealer = (System.Collections.Generic.List<GameObject>)dealerField.GetValue(visuals); // 표시 중인 딜러 카드
             if (displayedDealer.Count < 2 || displayedDealer[1].name != "공개 카드") throw new Exception("딜러 비공개 카드 공개 실패"); // 딜러 카드 공개 확인
