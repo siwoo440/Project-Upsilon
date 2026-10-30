@@ -55,6 +55,7 @@ public static class TablePlayModeSmoke // 플레이 모드 검증
             if (GameObject.Find("비공개 카드") == null || GameObject.Find("공개 카드") == null || GameObject.Find("베팅 칩") == null) throw new Exception("카드 또는 칩 표시 실패"); // 게임 물체 확인
             GameObject cardText = GameObject.Find("카드 숫자"); // 카드 숫자 찾기
             if (cardText == null || Vector3.Dot(cardText.transform.forward, Vector3.up) < 0.9f) throw new Exception("카드 숫자가 위쪽을 향하지 않습니다."); // 숫자 방향 확인
+            if (Vector3.Distance(cardText.transform.lossyScale, Vector3.one) > 0.1f) throw new Exception("카드 숫자 비율이 늘어났습니다."); // 숫자 크기 보정 확인
             BlackjackVisuals visuals = player.GetComponent<BlackjackVisuals>(); // 카드 표시 구성 확인
             FieldInfo groupField = typeof(BlackjackVisuals).GetField("group", BindingFlags.Instance | BindingFlags.NonPublic); // 카드 묶음 필드
             GameObject priorGroup = (GameObject)groupField.GetValue(visuals); // 기존 카드 묶음 보관

@@ -100,7 +100,7 @@ namespace Moonlight // 게임 이름 공간
             textObject.transform.SetParent(card.transform, false); // 카드에 숫자 연결
             textObject.transform.localPosition = new Vector3(0, 0.6f, 0); // 숫자 위치
             textObject.transform.localRotation = Quaternion.Euler(-90, 0, 0); // 숫자 위쪽 방향
-            textObject.transform.localScale = new Vector3(1 / 0.21f, 1 / 0.012f, 1 / 0.3f); // 부모 크기 보정
+            textObject.transform.localScale = new Vector3(1 / 0.21f, 1 / 0.3f, 1 / 0.012f); // 회전된 숫자의 부모 크기 보정
             TextMesh text = textObject.AddComponent<TextMesh>(); // 숫자 텍스트 생성
             text.text = rank == 1 ? "A" : rank == 11 ? "J" : rank == 12 ? "Q" : rank == 13 ? "K" : rank.ToString(); // 카드 숫자 표시
             text.anchor = TextAnchor.MiddleCenter; text.alignment = TextAlignment.Center; text.characterSize = 0.1f; text.fontSize = 32; text.color = Color.black; // 글자 표시 설정

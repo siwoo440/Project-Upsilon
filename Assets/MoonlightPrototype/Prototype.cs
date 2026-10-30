@@ -10,7 +10,7 @@ namespace Moonlight // 게임 이름 공간
         public GameState state; // 경제와 게임 상태
         public float x, y, z, yaw, pitch; // 위치와 시점
     } // 저장 자료 끝
-    public class Prototype : MonoBehaviour // 시제품 화면과 입력
+    public partial class Prototype : MonoBehaviour // 시제품 화면과 입력
     { // 시제품 시작
         public GameSettings settings = new GameSettings(); // 인스펙터에서 조정할 설정
         GameState game; // 현재 게임 상태
@@ -22,7 +22,6 @@ namespace Moonlight // 게임 이름 공간
         string previousPanel = ""; // 일시정지 전 화면
         int announcedRank; // 마지막 안내 등급
         long bet = 1000000; // 베팅 금액
-        GUIStyle label, button, panelStyle, hudStyle, promptStyle; // 화면 표현 설정
         string SavePath(string slot) { return Path.Combine(Application.persistentDataPath, "moonlight_" + slot + ".json"); } // 저장 경로
         void Start() // 시작 처리
         { // 시작 범위
@@ -142,106 +141,6 @@ namespace Moonlight // 게임 이름 공간
             if (target == "cashier") return "E: 정산 창구"; // 정산 안내
             return ""; // 주변 대상 없음
         } // 안내 끝
-        void OnGUI() // 임시 화면 그리기
-        { // 화면 시작
-            if (game == null) return; // 초기화 확인
-            if (label == null) // 글꼴 초기화 확인
-            { // 글꼴 생성 시작
-                Font font = Font.CreateDynamicFontFromOSFont("Malgun Gothic", 18); // 한글 시스템 글꼴
-                label = new GUIStyle(GUI.skin.label) { font = font, fontSize = 18, wordWrap = true }; label.normal.textColor = Color.white; // 본문 스타일
-                Texture2D panelImage = Resources.Load<Texture2D>("CasinoUI/RoyalPanel"); // 공통 패널 이미지
-                Texture2D buttonImage = Resources.Load<Texture2D>("CasinoUI/RoyalButton"); // 기본 버튼 이미지
-                Texture2D buttonActiveImage = Resources.Load<Texture2D>("CasinoUI/RoyalButtonActive"); // 강조 버튼 이미지
-                panelStyle = new GUIStyle(GUI.skin.box); // 패널 스타일 복사
-                panelStyle.padding = new RectOffset(28, 28, 26, 24); // 패널 안쪽 여백
-                hudStyle = new GUIStyle(GUI.skin.box); // 상태창 스타일 복사
-                if (panelImage != null) // 패널 이미지 확인
-                { // 패널 이미지 적용 시작
-                    panelStyle.normal.background = panelImage; // 공통 패널 배경
-                    hudStyle.normal.background = panelImage; // 상태창 배경
-                } // 패널 이미지 적용 끝
-                promptStyle = new GUIStyle(label); // 상호작용 안내 스타일
-                promptStyle.alignment = TextAnchor.MiddleCenter; // 안내 중앙 정렬
-                button = new GUIStyle(GUI.skin.button) { font = font, fontSize = 18, fixedHeight = 42, wordWrap = true }; // 버튼 스타일
-                button.normal.textColor = Color.white; // 기본 글자 색상
-                button.hover.textColor = Color.white; // 강조 글자 색상
-                button.active.textColor = Color.white; // 선택 글자 색상
-                if (buttonImage != null) button.normal.background = buttonImage; // 기본 버튼 배경
-                if (buttonActiveImage != null) // 강조 이미지 확인
-                { // 강조 이미지 적용 시작
-                    button.hover.background = buttonActiveImage; // 마우스 강조 배경
-                    button.active.background = buttonActiveImage; // 선택 강조 배경
-                    button.focused.background = buttonActiveImage; // 키보드 선택 배경
-                } // 강조 이미지 적용 끝
-            } // 글꼴 생성 끝
-            float hudWidth = Mathf.Min(680, Screen.width - 20); // 화면 폭에 맞춘 상태창
-            GUI.Box(new Rect(10, 10, hudWidth, 195), "", hudStyle); // 상태창 배경
-            GUI.Label(new Rect(35, 28, hudWidth - 50, 160), "현재 장소: " + MapLayout.Zone(transform.position.x, transform.position.z) + "\n칩: " + game.Chips.ToString("N0") + "   빚: " + game.Debt.ToString("N0") + "\n등급: " + (game.Member.Rank == 0 ? "브론즈" : "실버") + "   누적: " + game.Member.Experience + " EXP   게임 주기: " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap + " EXP\n다음 청구 예상: " + game.PreviewBill(settings).ToString("N0") + "   남은 시간: " + Math.Max(0, (game.NextBill - game.Minutes) / 60).ToString("F1") + "시간\n" + message + "\nWASD 이동 · Shift 달리기 · E 상호작용 · Esc 메뉴", label); // 핵심 정보 표시
-            if (game.GameOver || game.Escaped) panel = "end"; // 종료 화면 전환
-            if (panel == "") // 주변 안내 표시 여부
-            { // 주변 안내 시작
-                string nearby = NearbyLabel(); // 가까운 대상 확인
-                if (nearby != "") // 상호작용 대상 확인
-                { // 상호작용 안내 시작
-                    Rect promptRect = new Rect(Screen.width / 2f - 170, Screen.height - 85, 340, 65); // 하단 안내 위치
-                    GUI.Box(promptRect, "", hudStyle); // 안내 배경
-                    GUI.Label(promptRect, nearby, promptStyle); // 상호작용 안내
-                } // 상호작용 안내 끝
-                return; // 열린 화면 없음
-            } // 주변 안내 끝
-            float panelHeight = Mathf.Min(470, Screen.height - 220); // 화면 높이에 맞춘 패널
-            Rect panelRect = panel == "blackjack" ? new Rect(Screen.width - 350, 210, 340, panelHeight) : panel == "luna" ? new Rect(Screen.width / 2f - 330, Screen.height - 235, 660, 215) : new Rect(Screen.width / 2f - 270, (Screen.height - panelHeight) / 2f, 540, panelHeight); // 화면별 패널 위치
-            GUILayout.BeginArea(panelRect, panelStyle); // 대화 상자 시작
-            if (panel == "luna") GUILayout.Label("루나: 21에 가까운 쪽이 이겨요. A는 1 또는 11입니다. 히트로 카드를 받고 스탠드로 멈추세요.", label); // 루나 안내
-            if (panel == "work") // 업무 화면
-            { // 업무 화면 시작
-                GUILayout.Label("호텔 업무: " + settings.workMinutes + "분 / 보수 " + settings.workReward.ToString("N0") + "칩", label); // 업무 조건
-                if (GUILayout.Button("업무 시작", button) && !game.WorkActive) { game.StartWork(settings); panel = ""; Save("event"); } // 업무 시작
-                if (game.Member.Rank >= 1 && GUILayout.Button("실버 업무 시작: " + settings.silverWorkReward.ToString("N0") + "칩", button)) // 실버 업무 선택
-                { // 실버 업무 선택 시작
-                    if (game.StartSilverWork(settings)) // 업무 시작 가능 확인
-                    { // 업무 시작 처리
-                        panel = ""; // 업무 화면 닫기
-                        Save("event"); // 업무 시작 저장
-                    } // 업무 시작 끝
-                } // 실버 업무 선택 끝
-            } // 업무 화면 끝
-            if (panel == "blackjack") DrawBlackjack(); // 블랙잭 화면
-            if (panel == "cashier") // 정산 화면
-            { // 정산 화면 시작
-                GUILayout.Label("정산 창구: 청구 전에는 빚과 대출을 전액 상환할 수 있습니다.", label); // 상환 설명
-                if (GUILayout.Button("전액 상환하고 탈출", button)) { if (!game.RepayAll()) message = "전액 상환할 칩이 부족합니다."; else Save("event"); } // 조기 상환
-            } // 정산 화면 끝
-            if (panel == "pause" || panel == "end") // 저장 메뉴
-            { // 저장 메뉴 시작
-                GUILayout.Label(game.GameOver ? "청구 실패 — 끌려가 죽었습니다." : game.Escaped ? "빚을 모두 갚고 혼자 탈출했습니다." : "일시정지", label); // 종료 또는 정지 안내
-                if (GUILayout.Button("수동 저장", button) && !game.GameOver && !game.Escaped) Save("manual"); // 수동 저장
-                if (GUILayout.Button("수동 저장 불러오기", button)) Load("manual"); // 수동 불러오기
-                if (GUILayout.Button("청구 직전 불러오기", button)) Load("before_bill"); // 청구 전 복구
-                if (GUILayout.Button("정산 직후 불러오기", button)) Load("after_bill"); // 정산 후 복구
-                if (GUILayout.Button("시작 지점 불러오기", button)) Load("start"); // 시작 복구
-                if (GUILayout.Button("최근 이벤트 불러오기", button)) Load("event"); // 이벤트 복구
-            } // 저장 메뉴 끝
-            if (panel != "end" && GUILayout.Button(panel == "blackjack" ? "일어나기" : "닫기", button)) // 화면 닫기 선택
-            { // 화면 닫기 시작
-                if (panel == "pause") // 일시정지 닫기 확인
-                { // 정지 해제 시작
-                    panel = previousPanel; // 이전 화면 복원
-                } // 정지 해제 끝
-                else if (panel != "blackjack" || game.LeaveBlackjack()) // 라운드 이탈 가능 여부
-                { // 화면 종료 시작
-                    bool leavingTable = panel == "blackjack"; // 테이블 퇴장 확인
-                    panel = ""; // 화면 닫기
-                    UpdateCameraPose(); // 이동 시점 복원
-                    if (leavingTable) Save("event"); // 테이블 퇴장 저장
-                } // 화면 종료 끝
-                else // 진행 중 게임 확인
-                { // 이탈 제한 시작
-                    message = "라운드가 끝난 뒤 일어날 수 있습니다."; // 이탈 제한 안내
-                } // 이탈 제한 끝
-            } // 화면 닫기 끝
-            GUILayout.EndArea(); // 대화 상자 끝
-        } // 화면 끝
         void UpdateCameraPose() // 착석과 이동 시점 전환
         { // 시점 변경 시작
             if (game.Seated) // 착석 상태 확인
@@ -266,25 +165,5 @@ namespace Moonlight // 게임 이름 공간
             } // 카드 변환 끝
             return string.Join(", ", names); // 카드 이름 반환
         } // 카드 이름 변환 끝
-        void DrawBlackjack() // 블랙잭 조작 화면
-        { // 블랙잭 화면 시작
-            GUILayout.Label("블랙잭 | " + settings.decks + "덱 · 딜러 소프트 17 " + (settings.dealerHitsSoft17 ? "히트" : "스탠드") + " · 내추럴 3:2", label); // 현재 규칙 표시
-            if (game.Round.phase != 1) // 베팅 가능 상태
-            { // 베팅 화면 시작
-                GUILayout.Label("베팅: " + bet.ToString("N0") + "칩", label); // 베팅 금액 표시
-                if (GUILayout.Button("베팅 감소", button)) bet = Math.Max(settings.minBet, bet - settings.minBet); // 베팅 감소
-                if (GUILayout.Button("베팅 증가", button)) bet = Math.Min(settings.maxBet, bet + settings.minBet); // 베팅 증가
-                if (GUILayout.Button("카드 배분", button)) { if (!game.StartBlackjack(settings, bet)) message = "베팅 가능한 칩이 부족합니다."; else Save("event"); } // 라운드 시작
-            } // 베팅 화면 끝
-            if (game.Round.phase > 0) // 카드 표시 가능 상태
-            { // 카드 화면 시작
-                GUILayout.Label("내 카드: " + CardNames(game.Round.player) + " = " + Blackjack.Score(game.Round.player), label); // 플레이어 카드
-                GUILayout.Label("딜러: " + (game.Round.phase == 1 ? CardNames(game.Round.dealer.GetRange(0, 1)) + ", ?" : CardNames(game.Round.dealer) + " = " + Blackjack.Score(game.Round.dealer)), label); // 딜러 카드
-                if (game.Round.phase == 1 && GUILayout.Button("히트", button)) { game.Hit(settings); Save("event"); } // 히트 선택
-                if (game.Round.phase == 1 && GUILayout.Button("스탠드", button)) { game.Stand(settings); Save("event"); } // 스탠드 선택
-                if (game.Round.phase == 2) GUILayout.Label("결과: " + game.Round.result, label); // 결과 표시
-            } // 카드 화면 끝
-        } // 블랙잭 화면 끝
     } // 시제품 끝
 } // 이름 공간 끝
-
