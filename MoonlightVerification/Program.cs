@@ -85,5 +85,18 @@ class Program // 검증 실행기
         naturalRound.Round = new Round { phase = 1, wager = 100, player = new System.Collections.Generic.List<int> { 1, 10 }, dealer = new System.Collections.Generic.List<int> { 10, 9 } }; // 블랙잭 카드 설정
         naturalRound.Stand(settings); // 라운드 정산
         Check(naturalRound.Chips == 250 && naturalRound.Round.result == "블랙잭 승리", "블랙잭 3대2 배당"); // 블랙잭 지급 확인
+        var softStand = new GameState(settings); // 소프트 스탠드 검증 상태
+        softStand.Chips = 0; // 보유 칩 초기화
+        softStand.Round = new Round { phase = 1, wager = 100, player = new System.Collections.Generic.List<int> { 10, 8 }, dealer = new System.Collections.Generic.List<int> { 1, 6 }, shoe = new System.Collections.Generic.List<int> { 4 } }; // 소프트 17 카드 설정
+        settings.dealerHitsSoft17 = false; // 소프트 17 스탠드 규칙
+        softStand.Stand(settings); // 스탠드 결과 계산
+        Check(softStand.Chips == 200 && softStand.Round.dealer.Count == 2, "딜러 소프트 17 스탠드"); // 스탠드 동작 확인
+        var softHit = new GameState(settings); // 소프트 히트 검증 상태
+        softHit.Chips = 0; // 보유 칩 초기화
+        softHit.Round = new Round { phase = 1, wager = 100, player = new System.Collections.Generic.List<int> { 10, 8 }, dealer = new System.Collections.Generic.List<int> { 1, 6 }, shoe = new System.Collections.Generic.List<int> { 4 } }; // 동일 카드 설정
+        settings.dealerHitsSoft17 = true; // 소프트 17 히트 규칙
+        softHit.Stand(settings); // 히트 결과 계산
+        Check(softHit.Chips == 0 && softHit.Round.dealer.Count == 3, "딜러 소프트 17 히트"); // 히트 동작 확인
+        settings.dealerHitsSoft17 = false; // 기본 규칙 복원
     } // 검증 범위 끝
 } // 실행기 끝
