@@ -13,6 +13,7 @@ namespace Moonlight // 게임 이름 공간
     public partial class Prototype : MonoBehaviour // 시제품 화면과 입력
     { // 시제품 시작
         public GameSettings settings = new GameSettings(); // 인스펙터에서 조정할 설정
+        static Prototype activeSession; // 유지 중인 플레이어 세션
         GameState game; // 현재 게임 상태
         CharacterController controller; // 이동 충돌 처리
         Camera view; // 플레이어 카메라
@@ -25,6 +26,13 @@ namespace Moonlight // 게임 이름 공간
         string SavePath(string slot) { return Path.Combine(Application.persistentDataPath, "moonlight_" + slot + ".json"); } // 저장 경로
         void Start() // 시작 처리
         { // 시작 범위
+            if (activeSession != null && activeSession != this) // 중복 세션 확인
+            { // 중복 처리 시작
+                Destroy(gameObject); // 중복 플레이어 제거
+                return; // 중복 초기화 중단
+            } // 중복 처리 끝
+            activeSession = this; // 현재 세션 등록
+            DontDestroyOnLoad(gameObject); // 씬 전환 시 플레이어 유지
             controller = gameObject.AddComponent<CharacterController>(); // 플레이어 충돌체
             controller.height = 1.8f; controller.center = new Vector3(0, 0.9f, 0); // 충돌체 크기
             var cameraObject = new GameObject("Player Camera"); // 카메라 생성
@@ -167,3 +175,4 @@ namespace Moonlight // 게임 이름 공간
         } // 카드 이름 변환 끝
     } // 시제품 끝
 } // 이름 공간 끝
+
