@@ -98,5 +98,19 @@ class Program // 검증 실행기
         softHit.Stand(settings); // 히트 결과 계산
         Check(softHit.Chips == 0 && softHit.Round.dealer.Count == 3, "딜러 소프트 17 히트"); // 히트 동작 확인
         settings.dealerHitsSoft17 = false; // 기본 규칙 복원
+        var checkpoint = new GameState(settings); // 자동 저장 검증 상태
+        checkpoint.Chips = 200000000; checkpoint.NextBill = 1; // 납부 가능한 청구 설정
+        string beforeSnapshot = ""; string afterSnapshot = ""; // 자동 저장 자료 보관
+        GameClock.Advance(checkpoint, settings, 1, name => // 청구 시각 진행
+        { // 자동 저장 알림 시작
+            if (name == "before_bill") beforeSnapshot = JsonSerializer.Serialize(checkpoint, options); // 청구 직전 보관
+            if (name == "after_bill") afterSnapshot = JsonSerializer.Serialize(checkpoint, options); // 정산 직후 보관
+        }); // 자동 저장 알림 끝
+        var beforeRestore = JsonSerializer.Deserialize<GameState>(beforeSnapshot, options); // 청구 직전 복구
+        var afterRestore = JsonSerializer.Deserialize<GameState>(afterSnapshot, options); // 정산 직후 복구
+        GameClock.Advance(beforeRestore, settings, 0.1, null); // 청구 재실행
+        GameClock.Advance(afterRestore, settings, 0.1, null); // 정산 이후 진행
+        Check(beforeRestore.Debt == checkpoint.Debt && beforeRestore.Chips == checkpoint.Chips && beforeRestore.BillCount == 1, "청구 직전 복구 후 단일 정산"); // 청구 직전 복구 검증
+        Check(afterRestore.Debt == checkpoint.Debt && afterRestore.Chips == checkpoint.Chips && afterRestore.BillCount == 1, "정산 직후 복구 중복 방지"); // 정산 직후 복구 검증
     } // 검증 범위 끝
 } // 실행기 끝
