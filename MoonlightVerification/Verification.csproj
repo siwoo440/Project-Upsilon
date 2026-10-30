@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../Assets/MoonlightPrototype/Simulation.cs" />
+    <Compile Include="../Assets/MoonlightPrototype/MapLayout.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
 </Project>

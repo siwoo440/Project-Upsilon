@@ -28,34 +28,12 @@ namespace Moonlight // 게임 이름 공간
             var cameraObject = new GameObject("Player Camera"); // 카메라 생성
             cameraObject.transform.SetParent(transform); cameraObject.transform.localPosition = new Vector3(0, 1.6f, 0); // 시점 높이
             view = cameraObject.AddComponent<Camera>(); cameraObject.AddComponent<AudioListener>(); // 카메라 활성화
-            BuildRoom(); // 임시 공간 생성
+            CasinoMap.Build(); // 카지노 공간 생성
             game = new GameState(settings); // 새 게임 생성
-            transform.position = new Vector3(0, 0.1f, -7); // 입구 위치
+            transform.position = new Vector3(0, 0.1f, -18); // 입구 위치
             Save("start"); // 시작 자동 저장
             Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; // 마우스 고정
         } // 시작 끝
-        void Block(string name, Vector3 position, Vector3 scale, Color color) // 임시 도형 배치
-        { // 배치 시작
-            var block = GameObject.CreatePrimitive(PrimitiveType.Cube); // 기본 상자 생성
-            block.name = name; block.transform.position = position; block.transform.localScale = scale; // 이름과 크기
-            var shader = Shader.Find("Universal Render Pipeline/Lit"); // URP 재질 선택
-            if (shader == null) shader = Shader.Find("Standard"); // 기본 재질 대체
-            var material = new Material(shader); material.color = color; block.GetComponent<Renderer>().material = material; // 색상 적용
-        } // 배치 끝
-        void BuildRoom() // 로비와 상호작용 지점 생성
-        { // 공간 생성 시작
-            Block("바닥", new Vector3(0, -0.25f, 0), new Vector3(24, 0.5f, 22), new Color(0.13f, 0.025f, 0.04f)); // 붉은 바닥
-            Block("북쪽 벽", new Vector3(0, 2, 11), new Vector3(24, 4, 0.5f), Color.black); // 북쪽 경계
-            Block("남쪽 벽", new Vector3(0, 2, -11), new Vector3(24, 4, 0.5f), Color.black); // 남쪽 경계
-            Block("서쪽 벽", new Vector3(-12, 2, 0), new Vector3(0.5f, 4, 22), Color.black); // 서쪽 경계
-            Block("동쪽 벽", new Vector3(12, 2, 0), new Vector3(0.5f, 4, 22), Color.black); // 동쪽 경계
-            Block("루나", new Vector3(-5, 0.9f, 4), new Vector3(0.8f, 1.8f, 0.8f), new Color(0.8f, 0.65f, 0.3f)); // 루나 임시 인물
-            Block("업무", new Vector3(-7, 0.5f, -3), new Vector3(2, 1, 1), new Color(0.7f, 0.5f, 0.1f)); // 업무 장소
-            Block("블랙잭", new Vector3(1, 0.5f, 5), new Vector3(3, 1, 1.5f), new Color(0.1f, 0.35f, 0.2f)); // 게임 테이블
-            Block("정산", new Vector3(7, 0.5f, 2), new Vector3(2, 1, 1), new Color(0.7f, 0.5f, 0.1f)); // 정산 창구
-            var lightObject = new GameObject("Lobby Light"); // 조명 생성
-            var light = lightObject.AddComponent<Light>(); light.type = LightType.Directional; light.intensity = 1.1f; lightObject.transform.rotation = Quaternion.Euler(50, -30, 0); // 로비 조명 설정
-        } // 공간 생성 끝
         void Save(string slot) // 상태 파일 저장
         { // 저장 시작
             try // 파일 오류 처리
@@ -121,13 +99,23 @@ namespace Moonlight // 게임 이름 공간
         } // 시간 처리 끝
         void Interact() // 가까운 장소 이용
         { // 상호작용 시작
-            Vector3 p = transform.position; // 현재 위치
-            if (Vector3.Distance(p, new Vector3(-5, 0, 4)) < 3) panel = "luna"; // 루나 대화
-            else if (Vector3.Distance(p, new Vector3(-7, 0, -3)) < 3) panel = "work"; // 업무 장소
-            else if (Vector3.Distance(p, new Vector3(1, 0, 5)) < 3.5f) panel = "blackjack"; // 블랙잭 테이블
-            else if (Vector3.Distance(p, new Vector3(7, 0, 2)) < 3) panel = "cashier"; // 정산 창구
-            else message = "가까운 장소에서 E를 누르세요."; // 거리 안내
+            string target = MapLayout.Nearest(transform.position.x, transform.position.z); // 최근접 대상 확인
+            if (target == "") // 대상이 없는 경우
+            { // 거리 안내 시작
+                message = "가까운 장소에서 E를 누르세요."; // 거리 안내
+                return; // 상호작용 중단
+            } // 거리 안내 끝
+            panel = target; // 대상 화면 열기
         } // 상호작용 끝
+        string NearbyLabel() // 주변 대상 안내
+        { // 안내 시작
+            string target = MapLayout.Nearest(transform.position.x, transform.position.z); // 최근접 대상 확인
+            if (target == "luna") return "E: 루나와 대화"; // 루나 안내
+            if (target == "work") return "E: 호텔 업무"; // 업무 안내
+            if (target == "blackjack") return "E: 블랙잭"; // 게임 안내
+            if (target == "cashier") return "E: 정산 창구"; // 정산 안내
+            return ""; // 주변 대상 없음
+        } // 안내 끝
         void OnGUI() // 임시 화면 그리기
         { // 화면 시작
             if (game == null) return; // 초기화 확인
@@ -140,7 +128,11 @@ namespace Moonlight // 게임 이름 공간
             GUI.Box(new Rect(10, 10, 600, 150), ""); // HUD 배경
             GUI.Label(new Rect(20, 18, 580, 140), "칩: " + game.Chips.ToString("N0") + "   빚: " + game.Debt.ToString("N0") + "\n다음 청구 예상: " + game.PreviewBill(settings).ToString("N0") + "   남은 시간: " + Math.Max(0, (game.NextBill - game.Minutes) / 60).ToString("F1") + "시간\n" + message + "\nWASD 이동 · 마우스 시점 · E 상호작용 · Esc 메뉴", label); // 핵심 정보 표시
             if (game.GameOver || game.Escaped) panel = "end"; // 종료 화면 전환
-            if (panel == "") return; // 열린 화면 확인
+            if (panel == "") // 주변 안내 표시 여부
+            { // 주변 안내 시작
+                GUI.Label(new Rect(Screen.width / 2 - 110, Screen.height - 65, 250, 35), NearbyLabel(), label); // 상호작용 안내
+                return; // 열린 화면 없음
+            } // 주변 안내 끝
             GUILayout.BeginArea(new Rect(Screen.width / 2 - 270, 180, 540, 470), GUI.skin.box); // 중앙 대화 상자
             if (panel == "luna") GUILayout.Label("루나: 21에 가까운 쪽이 이겨요. A는 1 또는 11입니다. 히트로 카드를 받고 스탠드로 멈추세요.", label); // 루나 안내
             if (panel == "work") // 업무 화면

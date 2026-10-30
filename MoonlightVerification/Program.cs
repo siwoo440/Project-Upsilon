@@ -40,5 +40,10 @@ class Program // 검증 실행기
         Check(small.PreviewBill(settings) == 103, "최소 청구와 이자 버림"); // 잔액 상한 확인
         var repay = new GameState(settings); repay.Debt = 10; repay.Loan = 5; repay.Chips = 15; // 대출 포함 상환 설정
         Check(repay.RepayAll() && repay.Escaped && repay.Chips == 0, "대출 포함 전액 상환"); // 조기 탈출 확인
+        Check(MapLayout.Nearest(-5, 4) == "luna", "루나 위치 선택"); // 루나 대상 확인
+        Check(MapLayout.Nearest(-7, -3) == "work", "업무 위치 선택"); // 업무 대상 확인
+        Check(MapLayout.Nearest(1, 5) == "blackjack", "블랙잭 위치 선택"); // 게임 대상 확인
+        Check(MapLayout.Nearest(7, 2) == "cashier", "정산 위치 선택"); // 정산 대상 확인
+        Check(MapLayout.Nearest(0, -17) == "", "먼 거리 상호작용 차단"); // 거리 제한 확인
     } // 검증 범위 끝
 } // 실행기 끝
