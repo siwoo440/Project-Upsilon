@@ -84,8 +84,10 @@ namespace Moonlight // 게임 이름 공간
             if (!free) return; // 화면 표시 중 이동 제한
             if (mouse != null) { Vector2 delta = mouse.delta.ReadValue(); yaw += delta.x * 0.12f; pitch = Mathf.Clamp(pitch - delta.y * 0.12f, -80, 80); } // 마우스 시점
             transform.rotation = Quaternion.Euler(0, yaw, 0); view.transform.localRotation = Quaternion.Euler(pitch, 0, 0); // 시점 반영
-            Vector3 movement = new Vector3((keyboard.dKey.isPressed ? 1 : 0) - (keyboard.aKey.isPressed ? 1 : 0), -0.4f, (keyboard.wKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0)); // 이동 입력
-            controller.Move(transform.TransformDirection(movement.normalized) * 4 * Time.deltaTime); // 이동 적용
+            Vector3 movement = new Vector3((keyboard.dKey.isPressed ? 1 : 0) - (keyboard.aKey.isPressed ? 1 : 0), 0, (keyboard.wKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0)); // 수평 이동 입력
+            bool running = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed; // 달리기 입력 확인
+            Vector3 velocity = transform.TransformDirection(movement.normalized) * Movement.Speed(settings, running); // 수평 이동 속도
+            controller.Move((velocity + Vector3.down * 2) * Time.deltaTime); // 이동과 바닥 밀착 적용
             if (keyboard.eKey.wasPressedThisFrame) Interact(); // 상호작용 시도
         } // 갱신 끝
         void Advance(double elapsed) // 시계와 업무 처리
@@ -140,8 +142,8 @@ namespace Moonlight // 게임 이름 공간
                 label = new GUIStyle(GUI.skin.label) { font = font, fontSize = 18, wordWrap = true }; label.normal.textColor = Color.white; // 본문 스타일
                 button = new GUIStyle(GUI.skin.button) { font = font, fontSize = 18 }; // 버튼 스타일
             } // 글꼴 생성 끝
-            GUI.Box(new Rect(10, 10, 650, 175), ""); // HUD 배경
-            GUI.Label(new Rect(20, 18, 630, 165), "칩: " + game.Chips.ToString("N0") + "   빚: " + game.Debt.ToString("N0") + "\n등급: " + (game.Member.Rank == 0 ? "브론즈" : "실버") + "   누적: " + game.Member.Experience + " EXP   게임 주기: " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap + " EXP\n다음 청구 예상: " + game.PreviewBill(settings).ToString("N0") + "   남은 시간: " + Math.Max(0, (game.NextBill - game.Minutes) / 60).ToString("F1") + "시간\n" + message + "\nWASD 이동 · 마우스 시점 · E 상호작용 · Esc 메뉴", label); // 핵심 정보 표시
+            GUI.Box(new Rect(10, 10, 650, 195), ""); // HUD 배경
+            GUI.Label(new Rect(20, 18, 630, 185), "현재 장소: " + MapLayout.Zone(transform.position.x, transform.position.z) + "\n칩: " + game.Chips.ToString("N0") + "   빚: " + game.Debt.ToString("N0") + "\n등급: " + (game.Member.Rank == 0 ? "브론즈" : "실버") + "   누적: " + game.Member.Experience + " EXP   게임 주기: " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap + " EXP\n다음 청구 예상: " + game.PreviewBill(settings).ToString("N0") + "   남은 시간: " + Math.Max(0, (game.NextBill - game.Minutes) / 60).ToString("F1") + "시간\n" + message + "\nWASD 이동 · Shift 달리기 · E 상호작용 · Esc 메뉴", label); // 핵심 정보 표시
             if (game.GameOver || game.Escaped) panel = "end"; // 종료 화면 전환
             if (panel == "") // 주변 안내 표시 여부
             { // 주변 안내 시작

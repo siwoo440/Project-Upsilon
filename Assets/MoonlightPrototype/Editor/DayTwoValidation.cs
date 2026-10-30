@@ -20,6 +20,7 @@ public static class DayTwoValidation // 이동 경로 검증 도구
         Queue<Vector2Int> queue = new Queue<Vector2Int>(); // 탐색 대기열
         HashSet<Vector2Int> seen = new HashSet<Vector2Int>(); // 방문 위치 기록
         HashSet<string> reached = new HashSet<string>(); // 도달한 상호작용 대상
+        HashSet<string> zones = new HashSet<string>(); // 도달한 장소 기록
         Vector2Int start = new Vector2Int(0, -36); // 입구 시작 좌표
         queue.Enqueue(start); // 첫 위치 등록
         seen.Add(start); // 첫 위치 방문 기록
@@ -30,6 +31,7 @@ public static class DayTwoValidation // 이동 경로 검증 도구
             float x = point.x * 0.5f; // 가로 실제 좌표
             float z = point.y * 0.5f; // 세로 실제 좌표
             string target = MapLayout.Nearest(x, z); // 주변 상호작용 대상
+            zones.Add(MapLayout.Zone(x, z)); // 현재 장소 기록
             if (target != "") // 대상 존재 확인
             { // 대상 기록 시작
                 reached.Add(target); // 도달 대상 기록
@@ -37,7 +39,7 @@ public static class DayTwoValidation // 이동 경로 검증 도구
             foreach (Vector2Int direction in directions) // 인접 위치 확인
             { // 인접 탐색 시작
                 Vector2Int next = point + direction; // 다음 격자 위치
-                if (Mathf.Abs(next.x) > 41 || Mathf.Abs(next.y) > 41 || seen.Contains(next)) // 경계와 중복 확인
+                if (Mathf.Abs(next.x) > 107 || Mathf.Abs(next.y) > 95 || seen.Contains(next)) // 경계와 중복 확인
                 { // 제외 시작
                     continue; // 위치 건너뛰기
                 } // 제외 끝
@@ -57,6 +59,14 @@ public static class DayTwoValidation // 이동 경로 검증 도구
                 throw new Exception("도달할 수 없는 상호작용: " + name); // 실패 알림
             } // 실패 처리 끝
         } // 대상 검사 끝
+        foreach (string zone in new string[] { "입구·안내 데스크", "중앙 홀", "블랙잭·카드 홀", "룰렛 구역", "슬롯머신 구역", "바·휴식 공간", "카드 게임룸", "공연 무대", "VIP 라운지" }) // 필수 장소 확인
+        { // 장소 검사 시작
+            if (!zones.Contains(zone)) // 도달 실패 확인
+            { // 장소 실패 시작
+                throw new Exception("도달할 수 없는 장소: " + zone); // 실패 알림
+            } // 장소 실패 끝
+        } // 장소 검사 끝
+        Debug.Log("CASINO_ZONES_OK " + zones.Count); // 장소 검증 성공
         Debug.Log("DAY2_VALIDATION_OK 위치 " + seen.Count + " 대상 " + reached.Count); // 성공 결과 기록
         GameSettings settings = new GameSettings(); // 기본 게임 설정
         GameState original = new GameState(settings); // 저장할 게임 상태
@@ -114,5 +124,10 @@ public static class DayTwoValidation // 이동 경로 검증 도구
             throw new Exception("회원 기본 설정이 장면에 반영되지 않았습니다."); // 실패 알림
         } // 장면 설정 실패 끝
         Debug.Log("MEMBERSHIP_SCENE_OK"); // 실제 장면 설정 검증 성공
+        if (prototype.settings.walkSpeed != 4 || prototype.settings.runSpeed != 7) // 이동 기본 속도 확인
+        { // 속도 설정 실패 시작
+            throw new Exception("이동 속도 설정 오류"); // 실패 알림
+        } // 속도 설정 실패 끝
+        Debug.Log("SPRINT_SCENE_OK"); // 달리기 설정 검증 성공
     } // 검사 끝
 } // 검증 도구 끝

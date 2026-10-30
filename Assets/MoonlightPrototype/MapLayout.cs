@@ -10,6 +10,18 @@ namespace Moonlight // 게임 이름 공간
     } // 메뉴 상태 끝
     public static class MapLayout // 상호작용 위치 정의
     { // 위치 정의 시작
+        public static string Zone(float x, float z) // 현재 공간 이름
+        { // 공간 판별 시작
+            if (z >= 24 && x < -20) return "카드 게임룸"; // 왼쪽 위 카드룸
+            if (z >= 24 && x > 20) return "VIP 라운지"; // 오른쪽 위 VIP 공간
+            if (z >= 28 && Math.Abs(x) <= 20) return "공연 무대"; // 중앙 공연 공간
+            if (x <= -22 && z < -5) return "바·휴식 공간"; // 왼쪽 아래 바
+            if (x >= 42 && z < 24) return "슬롯머신 구역"; // 오른쪽 슬롯 구역
+            if (z < -13 && Math.Abs(x) < 20) return "입구·안내 데스크"; // 남쪽 입구
+            if (x <= -7 && z >= -5 && z < 24) return "블랙잭·카드 홀"; // 왼쪽 카드 홀
+            if (x >= 10 && z >= -5 && z < 24) return "룰렛 구역"; // 오른쪽 룰렛 홀
+            return "중앙 홀"; // 중앙 이동 공간
+        } // 공간 판별 끝
         public static string Nearest(float x, float z) // 가장 가까운 대상 찾기
         { // 탐색 시작
             string result = ""; // 선택 결과 초기화

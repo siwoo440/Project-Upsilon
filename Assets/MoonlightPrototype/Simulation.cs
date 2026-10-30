@@ -7,6 +7,7 @@ namespace Moonlight // 게임 이름 공간
         public long startingChips = 10000000, startingDebt = 1000000000, minimumBill = 20000000; // 초기 경제 수치
         public long workReward = 4000000, minBet = 1000000, maxBet = 20000000; // 업무와 베팅 수치
         public float minutesPerSecond = 2, billingHours = 72, workMinutes = 120; // 시간 수치
+        public float walkSpeed = 4, runSpeed = 7; // 걷기와 달리기 속도
         public int decks = 1; // 카드 덱 수
         public bool dealerHitsSoft17 = false; // 소프트 17 규칙
         public int workExperience = 10, gameExperience = 2, npcExperience = 5, billExperience = 30, cycleGameCap = 60; // 활동별 경험치 가안
@@ -18,6 +19,13 @@ namespace Moonlight // 게임 이름 공간
         public int silverRoomDiscount = 5, goldRoomDiscount = 10, platinumRoomDiscount = 15, diamondRoomDiscount = 20; // 후속 숙박 할인율
         public int requestExperience = 20, specialRequestExperience = 40, examExperience = 20; // 후속 활동 경험치 가안
     } // 설정 끝
+    public static class Movement // 이동 속도 계산
+    { // 이동 계산 시작
+        public static float Speed(GameSettings settings, bool running) // 입력별 이동 속도
+        { // 속도 선택 시작
+            return running ? settings.runSpeed : settings.walkSpeed; // 걷기 또는 달리기 속도
+        } // 속도 선택 끝
+    } // 이동 계산 끝
     [Serializable] public class Membership // 회원 저장 상태
     { // 회원 상태 시작
         public int Rank, Experience, CycleGameExperience; // 등급과 누적 경험치

@@ -153,5 +153,16 @@ class Program // 검증 실행기
         Check(memberLoaded.StartSilverWork(memberSettings), "실버 업무 해금"); // 실버 업무 시작 확인
         long silverStart = memberLoaded.Chips; GameClock.Advance(memberLoaded, memberSettings, memberSettings.workMinutes, null); // 실버 업무 완료
         Check(memberLoaded.Chips == silverStart + memberSettings.silverWorkReward, "실버 업무 보상"); // 실버 보수 확인
+        Check(MapLayout.Zone(0, -18) == "입구·안내 데스크", "입구 구역"); // 입구 구역 확인
+        Check(MapLayout.Zone(-35, -15) == "바·휴식 공간", "바 구역"); // 바 구역 확인
+        Check(MapLayout.Zone(-35, 30) == "카드 게임룸", "카드 게임룸 구역"); // 카드룸 확인
+        Check(MapLayout.Zone(0, 39) == "공연 무대", "공연 구역"); // 공연 구역 확인
+        Check(MapLayout.Zone(35, 30) == "VIP 라운지", "VIP 구역"); // VIP 구역 확인
+        Check(MapLayout.Zone(47, 0) == "슬롯머신 구역", "슬롯 구역"); // 슬롯 구역 확인
+        var movementSettings = new GameSettings { walkSpeed = 4, runSpeed = 7 }; // 이동 속도 설정
+        Check(Movement.Speed(movementSettings, false) == 4, "걷기 속도"); // 걷기 속도 확인
+        Check(Movement.Speed(movementSettings, true) == 7, "달리기 속도"); // 달리기 속도 확인
+        movementSettings.runSpeed = 9; // 달리기 속도 변경
+        Check(Movement.Speed(movementSettings, true) == 9, "달리기 설정 반영"); // 설정 변경 확인
     } // 검증 범위 끝
 } // 실행기 끝
