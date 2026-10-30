@@ -55,6 +55,12 @@ public static class TablePlayModeSmoke // 플레이 모드 검증
             if (GameObject.Find("비공개 카드") == null || GameObject.Find("공개 카드") == null || GameObject.Find("베팅 칩") == null) throw new Exception("카드 또는 칩 표시 실패"); // 게임 물체 확인
             GameObject cardText = GameObject.Find("카드 숫자"); // 카드 숫자 찾기
             if (cardText == null || Vector3.Dot(cardText.transform.forward, Vector3.up) < 0.9f) throw new Exception("카드 숫자가 위쪽을 향하지 않습니다."); // 숫자 방향 확인
+            BlackjackVisuals visuals = player.GetComponent<BlackjackVisuals>(); // 카드 표시 구성 확인
+            FieldInfo groupField = typeof(BlackjackVisuals).GetField("group", BindingFlags.Instance | BindingFlags.NonPublic); // 카드 묶음 필드
+            GameObject priorGroup = (GameObject)groupField.GetValue(visuals); // 기존 카드 묶음 보관
+            game.Round.player.Add(2); // 히트 카드 추가
+            visuals.Sync(game); // 변경된 카드 표시
+            if (!ReferenceEquals(priorGroup, groupField.GetValue(visuals))) throw new Exception("히트할 때 기존 카드가 다시 생성되었습니다."); // 기존 카드 유지 확인
             if (game.LeaveBlackjack()) throw new Exception("진행 중 이탈 허용 오류"); // 라운드 중 이탈 확인
             string state = JsonUtility.ToJson(game); // 착석 상태 저장 형식
             GameState restored = JsonUtility.FromJson<GameState>(state); // 착석 상태 복구
@@ -65,6 +71,10 @@ public static class TablePlayModeSmoke // 플레이 모드 검증
             game = (GameState)field.GetValue(player); // 불러온 상태 확인
             if (!game.Seated || game.Round.wager != 100 || Vector3.Distance(camera.transform.position, new Vector3(1, 1.55f, 2.9f)) > 0.01f) throw new Exception("수동 저장의 착석 복구 실패"); // 파일 복구 확인
             game.Stand(new GameSettings()); // 진행 중 라운드 정산
+            visuals.Sync(game); // 정산 결과를 테이블에 반영
+            FieldInfo dealerField = typeof(BlackjackVisuals).GetField("dealerCards", BindingFlags.Instance | BindingFlags.NonPublic); // 딜러 카드 목록 필드
+            var displayedDealer = (System.Collections.Generic.List<GameObject>)dealerField.GetValue(visuals); // 표시 중인 딜러 카드
+            if (displayedDealer.Count < 2 || displayedDealer[1].name != "공개 카드") throw new Exception("딜러 비공개 카드 공개 실패"); // 딜러 카드 공개 확인
             if (!game.LeaveBlackjack()) throw new Exception("정산 후 퇴장 실패"); // 일어나기 확인
             typeof(Prototype).GetMethod("UpdateCameraPose", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(player, null); // 이동 시점 복원
             if (Vector3.Distance(camera.transform.localPosition, new Vector3(0, 1.6f, 0)) > 0.01f) throw new Exception("이동 카메라 복원 실패"); // 복귀 시점 확인
