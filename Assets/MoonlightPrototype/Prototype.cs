@@ -43,7 +43,13 @@ namespace Moonlight // 게임 이름 공간
             tableVisuals = gameObject.AddComponent<BlackjackVisuals>(); // 카드 표시 구성
             game = new GameState(settings); // 새 게임 생성
             transform.position = new Vector3(0, 0.1f, -18); // 입구 위치
-            Save("start"); // 시작 자동 저장
+            if (TitleMenu.PendingSlot == null) Save("start"); // 새 게임 시작 자동 저장
+            else // 이어하기 상태 확인
+            { // 이어하기 시작
+                string slot = TitleMenu.PendingSlot; // 요청된 저장 슬롯
+                TitleMenu.PendingSlot = null; // 중복 불러오기 방지
+                Load(slot); // 저장 상태 복원
+            } // 이어하기 끝
             Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; // 마우스 고정
         } // 시작 끝
         void Save(string slot) // 상태 파일 저장
@@ -195,4 +201,3 @@ namespace Moonlight // 게임 이름 공간
         } // 카드 이름 변환 끝
     } // 시제품 끝
 } // 이름 공간 끝
-
