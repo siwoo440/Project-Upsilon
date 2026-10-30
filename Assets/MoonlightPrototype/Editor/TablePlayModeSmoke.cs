@@ -53,6 +53,8 @@ public static class TablePlayModeSmoke // 플레이 모드 검증
             game.Round = new Round { phase = 1, wager = 100, player = new System.Collections.Generic.List<int> { 10, 8 }, dealer = new System.Collections.Generic.List<int> { 1, 6 } }; // 테스트 카드 설정
             player.GetComponent<BlackjackVisuals>().Sync(game); // 실제 카드 표시 갱신
             if (GameObject.Find("비공개 카드") == null || GameObject.Find("공개 카드") == null || GameObject.Find("베팅 칩") == null) throw new Exception("카드 또는 칩 표시 실패"); // 게임 물체 확인
+            GameObject cardText = GameObject.Find("카드 숫자"); // 카드 숫자 찾기
+            if (cardText == null || Vector3.Dot(cardText.transform.forward, Vector3.up) < 0.9f) throw new Exception("카드 숫자가 위쪽을 향하지 않습니다."); // 숫자 방향 확인
             if (game.LeaveBlackjack()) throw new Exception("진행 중 이탈 허용 오류"); // 라운드 중 이탈 확인
             string state = JsonUtility.ToJson(game); // 착석 상태 저장 형식
             GameState restored = JsonUtility.FromJson<GameState>(state); // 착석 상태 복구
