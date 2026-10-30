@@ -52,5 +52,33 @@ public static class DayTwoValidation // 이동 경로 검증 도구
             } // 실패 처리 끝
         } // 대상 검사 끝
         Debug.Log("DAY2_VALIDATION_OK 위치 " + seen.Count + " 대상 " + reached.Count); // 성공 결과 기록
+        GameSettings settings = new GameSettings(); // 기본 게임 설정
+        GameState original = new GameState(settings); // 저장할 게임 상태
+        original.Chips = 10000000; // 검증용 보유 칩
+        original.StartWork(settings); // 진행 중 업무 시작
+        original.StartBlackjack(settings, 1000000); // 블랙잭 라운드 시작
+        string json = JsonUtility.ToJson(original); // 유니티 저장 형식 변환
+        GameState restored = JsonUtility.FromJson<GameState>(json); // 저장 상태 복구
+        if (restored.Chips != original.Chips || restored.WorkActive != original.WorkActive || restored.WorkRemaining != original.WorkRemaining || restored.RandomState != original.RandomState || restored.Round.wager != original.Round.wager || restored.Round.phase != original.Round.phase || restored.Round.shoe.Count != original.Round.shoe.Count) // 복구 상태 비교
+        { // 복구 실패 시작
+            throw new Exception("Unity 저장 상태 복구 실패"); // 실패 알림
+        } // 복구 실패 끝
+        Debug.Log("DAY8_JSON_OK"); // 직렬화 검증 성공
+        SaveData save = new SaveData { state = original, x = 1, y = 2, z = 3, yaw = 45, pitch = -10 }; // 위치 포함 저장 자료
+        string savePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "moonlight_day8_" + Guid.NewGuid().ToString("N") + ".json"); // 독립 임시 저장 경로
+        try // 저장 파일 검증
+        { // 파일 검증 시작
+            System.IO.File.WriteAllText(savePath, JsonUtility.ToJson(save)); // 저장 파일 작성
+            SaveData loaded = JsonUtility.FromJson<SaveData>(System.IO.File.ReadAllText(savePath)); // 저장 파일 복구
+            if (loaded.state.RandomState != original.RandomState || loaded.state.Round.wager != original.Round.wager || loaded.x != 1 || loaded.yaw != 45) // 저장 내용 확인
+            { // 복구 실패 시작
+                throw new Exception("수동 저장 파일 복구 실패"); // 실패 알림
+            } // 복구 실패 끝
+        } // 파일 검증 끝
+        finally // 임시 파일 정리
+        { // 정리 시작
+            System.IO.File.Delete(savePath); // 검증 파일 삭제
+        } // 정리 끝
+        Debug.Log("DAY8_FILE_OK"); // 저장 파일 검증 성공
     } // 검사 끝
 } // 검증 도구 끝
