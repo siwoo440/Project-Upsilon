@@ -168,9 +168,19 @@ namespace Moonlight // 게임 이름 공간
             if (panel != "end" && GUILayout.Button("닫기", button)) panel = ""; // 화면 닫기
             GUILayout.EndArea(); // 대화 상자 끝
         } // 화면 끝
+        string CardNames(System.Collections.Generic.List<int> cards) // 카드 이름 표시
+        { // 카드 이름 변환 시작
+            string[] names = new string[cards.Count]; // 표시 이름 목록
+            for (int i = 0; i < cards.Count; i++) // 각 카드 확인
+            { // 카드 변환 시작
+                int card = cards[i]; // 카드 숫자 확인
+                names[i] = card == 1 ? "A" : card == 11 ? "J" : card == 12 ? "Q" : card == 13 ? "K" : card.ToString(); // 카드 이름 변환
+            } // 카드 변환 끝
+            return string.Join(", ", names); // 카드 이름 반환
+        } // 카드 이름 변환 끝
         void DrawBlackjack() // 블랙잭 조작 화면
         { // 블랙잭 화면 시작
-            GUILayout.Label("블랙잭 | 1덱 · 딜러 소프트 17 스탠드 · 내추럴 3:2", label); // 임시 규칙 표시
+            GUILayout.Label("블랙잭 | " + settings.decks + "덱 · 딜러 소프트 17 " + (settings.dealerHitsSoft17 ? "히트" : "스탠드") + " · 내추럴 3:2", label); // 현재 규칙 표시
             if (game.Round.phase != 1) // 베팅 가능 상태
             { // 베팅 화면 시작
                 GUILayout.Label("베팅: " + bet.ToString("N0") + "칩", label); // 베팅 금액 표시
@@ -180,8 +190,8 @@ namespace Moonlight // 게임 이름 공간
             } // 베팅 화면 끝
             if (game.Round.phase > 0) // 카드 표시 가능 상태
             { // 카드 화면 시작
-                GUILayout.Label("내 카드: " + string.Join(", ", game.Round.player) + " = " + Blackjack.Score(game.Round.player), label); // 플레이어 카드
-                GUILayout.Label("딜러: " + (game.Round.phase == 1 ? game.Round.dealer[0].ToString() + ", ?" : string.Join(", ", game.Round.dealer) + " = " + Blackjack.Score(game.Round.dealer)), label); // 딜러 카드
+                GUILayout.Label("내 카드: " + CardNames(game.Round.player) + " = " + Blackjack.Score(game.Round.player), label); // 플레이어 카드
+                GUILayout.Label("딜러: " + (game.Round.phase == 1 ? CardNames(game.Round.dealer.GetRange(0, 1)) + ", ?" : CardNames(game.Round.dealer) + " = " + Blackjack.Score(game.Round.dealer)), label); // 딜러 카드
                 if (game.Round.phase == 1 && GUILayout.Button("히트", button)) { game.Hit(settings); Save("event"); } // 히트 선택
                 if (game.Round.phase == 1 && GUILayout.Button("스탠드", button)) { game.Stand(settings); Save("event"); } // 스탠드 선택
                 if (game.Round.phase == 2) GUILayout.Label("결과: " + game.Round.result, label); // 결과 표시

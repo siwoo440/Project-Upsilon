@@ -72,5 +72,18 @@ class Program // 검증 실행기
         pendingBet.NextBill = 1; // 빠른 청구 시각
         GameClock.Advance(pendingBet, settings, 1, null); // 청구 시각 진행
         Check(!pendingBet.GameOver && pendingBet.Round.wager == 1000000 && pendingBet.Round.phase == 1, "납부 후 베팅 유지"); // 베팅 지속 확인
+        Check(Blackjack.Score(new int[] { 1, 6 }) == 17, "소프트 17 점수"); // 소프트 합계 확인
+        Check(Blackjack.Soft(new System.Collections.Generic.List<int> { 1, 6 }), "소프트 17 판정"); // 소프트 여부 확인
+        Check(Blackjack.Score(new int[] { 1, 6, 10 }) == 17, "에이스 1 전환"); // 에이스 감소 확인
+        var tieRound = new GameState(settings); // 무승부 검증 상태
+        tieRound.Chips = 0; // 남은 칩 설정
+        tieRound.Round = new Round { phase = 1, wager = 100, player = new System.Collections.Generic.List<int> { 10, 8 }, dealer = new System.Collections.Generic.List<int> { 10, 8 } }; // 동점 카드 설정
+        tieRound.Stand(settings); // 라운드 정산
+        Check(tieRound.Chips == 100 && tieRound.Round.result == "무승부", "무승부 원금 반환"); // 무승부 지급 확인
+        var naturalRound = new GameState(settings); // 내추럴 검증 상태
+        naturalRound.Chips = 0; // 남은 칩 설정
+        naturalRound.Round = new Round { phase = 1, wager = 100, player = new System.Collections.Generic.List<int> { 1, 10 }, dealer = new System.Collections.Generic.List<int> { 10, 9 } }; // 블랙잭 카드 설정
+        naturalRound.Stand(settings); // 라운드 정산
+        Check(naturalRound.Chips == 250 && naturalRound.Round.result == "블랙잭 승리", "블랙잭 3대2 배당"); // 블랙잭 지급 확인
     } // 검증 범위 끝
 } // 실행기 끝
