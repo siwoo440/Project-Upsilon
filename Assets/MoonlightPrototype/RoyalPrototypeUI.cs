@@ -80,26 +80,21 @@ namespace Moonlight // 게임 이름 공간
         } // UI 출력 끝
         void DrawRoyalHud() // 상단 상태 정보 출력
         { // 상태 정보 시작
-            RoyalImage("hud_frame", new Rect(15, 5, 520, 470)); // 네 줄 상태창 배경
             string[] icons = { "icon_chips", "icon_debt", "icon_rank", "icon_experience" }; // 상태별 아이콘
-            string[] titles = { "보유 칩", "남은 빚", "회원 등급", "누적 경험치" }; // 상태별 이름
-            string[] values = { game.Chips.ToString("N0"), game.Debt.ToString("N0"), game.Member.Rank == 0 ? "브론즈" : "실버", game.Member.Experience + " EXP" }; // 현재 상태 값
+            string[] values = { game.Chips.ToString("N0"), game.Debt.ToString("N0"), game.Member.Rank == 0 ? "브론즈" : "실버", game.Member.Experience + "  |  " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap }; // 현재 상태 값
             for (int i = 0; i < 4; i++) // 네 가지 상태 표시
             { // 상태 행 시작
-                float y = 92 + i * 79; // 상태 행 높이
-                RoyalImage(icons[i], new Rect(78, y + 4, 65, 65), true); // 상태 아이콘
-                RoyalLabel(new Rect(180, y + 5, 255, 27), titles[i], royalSmall); // 상태 이름
-                RoyalLabel(new Rect(180, y + 30, 270, 35), values[i], royalText); // 상태 값
+                float y = 20 + i * 55; // 상태 행 높이
+                RoyalImage(icons[i], new Rect(25, y, 46, 46), true); // 상태 아이콘
+                RoyalLabel(new Rect(80, y + 7, 320, 34), values[i], royalText); // 상태 값
             } // 상태 행 끝
             RoyalImage("countdown_frame", new Rect(1480, 15, 420, 160)); // 청구 시계 배경
             RoyalImage("icon_bill_clock", new Rect(1530, 47, 75, 75), true); // 청구 시계 아이콘
             double remaining = Math.Max(0, game.NextBill - game.Minutes); // 남은 게임 시간
             RoyalLabel(new Rect(1610, 67, 260, 28), "다음 청구까지  " + (remaining / 60).ToString("F1") + "시간", royalSmall); // 청구 남은 시간
             RoyalLabel(new Rect(1610, 96, 260, 33), game.PreviewBill(settings).ToString("N0") + " 칩", royalText); // 예상 청구액
-            RoyalImage("dialogue_frame", new Rect(15, 425, 680, 190)); // 장소와 알림 배경
-            RoyalLabel(new Rect(75, 470, 550, 25), MapLayout.Zone(transform.position.x, transform.position.z), royalSmall); // 현재 장소
-            RoyalLabel(new Rect(75, 500, 550, 28), message, royalSmall); // 상태 안내
-            RoyalLabel(new Rect(75, 530, 550, 25), "주기별 게임 경험치  " + game.Member.CycleGameExperience + " / " + settings.cycleGameCap + " EXP", royalSmall); // 주기 경험치 한도
+            RoyalImage("countdown_frame", new Rect(600, 5, 720, 125)); // 상태 알림 배경
+            RoyalLabel(new Rect(680, 45, 560, 35), message, royalSmall); // 상태 안내
         } // 상태 정보 끝
         void DrawRoyalPrompt() // 주변 상호작용 출력
         { // 주변 안내 시작
@@ -237,3 +232,4 @@ namespace Moonlight // 게임 이름 공간
         } // 결과 화면 끝
     } // UI 구성 끝
 } // 이름 공간 끝
+
