@@ -31,7 +31,6 @@ namespace Moonlight // 게임 이름 공간
             var cameraObject = new GameObject("Player Camera"); // 카메라 생성
             cameraObject.transform.SetParent(transform); cameraObject.transform.localPosition = new Vector3(0, 1.6f, 0); // 시점 높이
             view = cameraObject.AddComponent<Camera>(); cameraObject.AddComponent<AudioListener>(); // 카메라 활성화
-            CasinoMap.Build(); // 카지노 공간 생성
             tableVisuals = gameObject.AddComponent<BlackjackVisuals>(); // 카드 표시 구성
             game = new GameState(settings); // 새 게임 생성
             transform.position = new Vector3(0, 0.1f, -18); // 입구 위치

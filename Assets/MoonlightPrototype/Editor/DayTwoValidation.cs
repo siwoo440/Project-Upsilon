@@ -8,8 +8,20 @@ public static class DayTwoValidation // 이동 경로 검증 도구
 { // 검증 도구 시작
     public static void Run() // 임시 맵의 경로 검사
     { // 검사 시작
-        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); // 임시 장면 생성
-        CasinoMap.Build(); // 카지노 맵 생성
+        EditorSceneManager.OpenScene("Assets/Moonlight/Prototype.unity", OpenSceneMode.Single); // 저장된 시제품 장면 열기
+        GameObject environment = GameObject.Find("Casino Blockout"); // 저장된 실내 맵 확인
+        if (environment == null || environment.transform.childCount < 20) // 장면 내 배치 확인
+        { // 맵 검증 실패 시작
+            throw new Exception("장면에 저장된 카지노 맵이 없습니다."); // 실패 알림
+        } // 맵 검증 실패 끝
+        foreach (Renderer renderer in environment.GetComponentsInChildren<Renderer>(true)) // 저장된 맵 재질 반복
+        { // 재질 확인 시작
+            foreach (Material material in renderer.sharedMaterials) // 각 재질 확인
+            { // 재질 검사 시작
+                if (material == null || !AssetDatabase.Contains(material)) throw new Exception("맵 재질 에셋이 누락되었습니다."); // 재질 연결 검사
+            } // 재질 검사 끝
+        } // 재질 확인 끝
+        Debug.Log("SCENE_ENVIRONMENT_ASSETS_OK"); // 저장된 재질 검증 성공
         GameObject table = GameObject.Find("블랙잭 모델"); // 가져온 테이블 확인
         if (table == null || table.GetComponentsInChildren<MeshRenderer>().Length < 3 || table.GetComponent<BoxCollider>() == null) // 모델과 충돌체 확인
         { // 모델 실패 시작
