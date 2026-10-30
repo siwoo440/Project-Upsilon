@@ -22,6 +22,12 @@ public static class DayTwoValidation // 이동 경로 검증 도구
             } // 재질 검사 끝
         } // 재질 확인 끝
         Debug.Log("SCENE_ENVIRONMENT_ASSETS_OK"); // 저장된 재질 검증 성공
+        GameObject anchors = GameObject.Find("Interaction Targets"); // 상호작용 위치 묶음 확인
+        if (anchors == null || anchors.transform.childCount != 4) throw new Exception("장면에 상호작용 지점이 없습니다."); // 지점 저장 확인
+        foreach (SceneInteractionPoint point in anchors.GetComponentsInChildren<SceneInteractionPoint>()) // 저장된 지점 확인
+        { // 지점 확인 시작
+            if (SceneInteractionPoint.Nearest(point.transform.position) != point.target) throw new Exception("상호작용 지점 연결 오류: " + point.name); // 지점 연결 검사
+        } // 지점 확인 끝
         GameObject table = GameObject.Find("블랙잭 모델"); // 가져온 테이블 확인
         if (table == null || table.GetComponentsInChildren<MeshRenderer>().Length < 3 || table.GetComponent<BoxCollider>() == null) // 모델과 충돌체 확인
         { // 모델 실패 시작
@@ -144,3 +150,4 @@ public static class DayTwoValidation // 이동 경로 검증 도구
         Debug.Log("SPRINT_SCENE_OK"); // 달리기 설정 검증 성공
     } // 검사 끝
 } // 검증 도구 끝
+

@@ -153,7 +153,7 @@ namespace Moonlight // 게임 이름 공간
         } // 이벤트 처리 끝
         void Interact() // 가까운 장소 이용
         { // 상호작용 시작
-            string target = MapLayout.Nearest(transform.position.x, transform.position.z); // 최근접 대상 확인
+            string target = SceneInteractionPoint.Nearest(transform.position); // 최근접 대상 확인
             if (target == "") // 대상이 없는 경우
             { // 거리 안내 시작
                 message = "가까운 장소에서 E를 누르세요."; // 거리 안내
@@ -168,7 +168,7 @@ namespace Moonlight // 게임 이름 공간
         } // 상호작용 끝
         string NearbyLabel() // 주변 대상 안내
         { // 안내 시작
-            string target = MapLayout.Nearest(transform.position.x, transform.position.z); // 최근접 대상 확인
+            string target = SceneInteractionPoint.Nearest(transform.position); // 최근접 대상 확인
             if (target == "luna") return "E: 루나와 대화"; // 루나 안내
             if (target == "work") return "E: 호텔 업무"; // 업무 안내
             if (target == "blackjack") return "E: 블랙잭 의자에 앉기"; // 게임 안내
@@ -201,3 +201,4 @@ namespace Moonlight // 게임 이름 공간
         } // 카드 이름 변환 끝
     } // 시제품 끝
 } // 이름 공간 끝
+

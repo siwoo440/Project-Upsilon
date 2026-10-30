@@ -15,7 +15,7 @@
 
 실내 맵은 입구·중앙 홀·블랙잭 홀·룰렛·슬롯·바·카드 게임룸·무대·VIP 라운지로 구분합니다. 구역과 가구 대부분은 기본 도형이며, 룰렛·슬롯과 VIP 시설은 아직 기능이 없는 임시 공간입니다. VIP 입장 제한은 후속 작업입니다.
 
-맵 오브젝트는 `Prototype.unity`의 `Casino Blockout` 아래에 저장되어 있어 Scene 뷰에서 직접 선택하고 배치할 수 있습니다. 재생 중 변경은 Unity에서 자동 보존되지 않으므로 편집 모드에서 수정하고 장면을 저장합니다. 기존 네 상호작용 지점의 판정 좌표는 `MapLayout.cs`에서 관리하므로 관련 오브젝트를 옮길 때 함께 조정해야 합니다.
+맵 오브젝트는 `Prototype.unity`의 `Casino Blockout` 아래에 저장되어 있어 Scene 뷰에서 직접 선택하고 배치할 수 있습니다. 재생 중 변경은 Unity에서 자동 보존되지 않으므로 편집 모드에서 수정하고 장면을 저장합니다. 네 상호작용 지점은 `Interaction Targets` 아래의 씬 오브젝트이며, 위치와 `SceneInteractionPoint`의 반경을 Inspector에서 조정할 수 있습니다.
 
 ---
 ## 임시 수치와 규칙
@@ -33,3 +33,4 @@
 독립 규칙 검증은 프로젝트 루트에서 `dotnet build MoonlightVerification/Verification.csproj` 후 `dotnet MoonlightVerification/bin/Debug/net10.0/Verification.dll`로 실행합니다. Unity 저장은 JsonUtility를 사용하므로 별도의 Unity 실행 검증이 필요합니다.
 
 Unity 물리 충돌 기반의 자동 경로 탐색으로 입구에서 네 상호작용 범위에 도달할 수 있는지 검사합니다. 실제 플레이를 통한 화면 크기와 한글 폰트, 조작감, UI 열기·닫기, 저장 복구와 청구 시각 경계의 통합 검증이 필요합니다. 실제 에셋 교체, 오디오, 정식 UI, 나머지 카지노 게임과 콘텐츠는 추후 작업입니다.
+
