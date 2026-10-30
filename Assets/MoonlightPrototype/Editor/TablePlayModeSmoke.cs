@@ -71,6 +71,20 @@ public static class TablePlayModeSmoke // 플레이 모드 검증
             typeof(Prototype).GetMethod("Load", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(player, new object[] { "manual" }); // 실제 수동 불러오기 실행
             game = (GameState)field.GetValue(player); // 불러온 상태 확인
             if (!game.Seated || game.Round.wager != 100 || Vector3.Distance(camera.transform.position, new Vector3(1, 1.55f, 2.9f)) > 0.01f) throw new Exception("수동 저장의 착석 복구 실패"); // 파일 복구 확인
+            game.Chips = 200000000; game.NextBill = game.Minutes + 1; // 청구 검증 자금과 시각
+            GameClock.Advance(game, new GameSettings(), 1, eventName => // 착석 중 청구 진행
+            { // 저장 콜백 시작
+                if (eventName == "before_bill" || eventName == "after_bill") typeof(Prototype).GetMethod("Save", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(player, new object[] { eventName }); // 청구 전후 저장
+            }); // 저장 콜백 끝
+            long billChips = game.Chips; long billDebt = game.Debt; int billCount = game.BillCount; // 정산 결과 보관
+            typeof(Prototype).GetMethod("Load", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(player, new object[] { "before_bill" }); // 청구 직전 파일 복구
+            game = (GameState)field.GetValue(player); // 청구 직전 상태 확인
+            GameClock.Advance(game, new GameSettings(), 0.1, null); // 복구한 청구 정산
+            if (game.Chips != billChips || game.Debt != billDebt || game.BillCount != billCount || !game.Seated || game.Round.wager != 100) throw new Exception("착석 중 청구 직전 복구 실패"); // 단일 정산 확인
+            typeof(Prototype).GetMethod("Load", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(player, new object[] { "after_bill" }); // 정산 직후 파일 복구
+            game = (GameState)field.GetValue(player); // 정산 직후 상태 확인
+            GameClock.Advance(game, new GameSettings(), 0.1, null); // 정산 이후 시간 진행
+            if (game.Chips != billChips || game.Debt != billDebt || game.BillCount != billCount || !game.Seated || game.Round.wager != 100) throw new Exception("착석 중 정산 직후 복구 실패"); // 중복 정산 확인
             visuals.Sync(game); // 복구된 베팅 표시
             wagerToken = (GameObject)typeof(BlackjackVisuals).GetField("token", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(visuals); // 복구된 칩 확인
             game.Stand(new GameSettings()); // 진행 중 라운드 정산
