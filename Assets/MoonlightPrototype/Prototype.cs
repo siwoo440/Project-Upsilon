@@ -22,7 +22,7 @@ namespace Moonlight // 게임 이름 공간
         string previousPanel = ""; // 일시정지 전 화면
         int announcedRank; // 마지막 안내 등급
         long bet = 1000000; // 베팅 금액
-        GUIStyle label, button; // 화면 글꼴 설정
+        GUIStyle label, button, panelStyle, hudStyle, promptStyle; // 화면 표현 설정
         string SavePath(string slot) { return Path.Combine(Application.persistentDataPath, "moonlight_" + slot + ".json"); } // 저장 경로
         void Start() // 시작 처리
         { // 시작 범위
@@ -149,18 +149,49 @@ namespace Moonlight // 게임 이름 공간
             { // 글꼴 생성 시작
                 Font font = Font.CreateDynamicFontFromOSFont("Malgun Gothic", 18); // 한글 시스템 글꼴
                 label = new GUIStyle(GUI.skin.label) { font = font, fontSize = 18, wordWrap = true }; label.normal.textColor = Color.white; // 본문 스타일
-                button = new GUIStyle(GUI.skin.button) { font = font, fontSize = 18 }; // 버튼 스타일
+                Texture2D panelImage = Resources.Load<Texture2D>("CasinoUI/RoyalPanel"); // 공통 패널 이미지
+                Texture2D buttonImage = Resources.Load<Texture2D>("CasinoUI/RoyalButton"); // 기본 버튼 이미지
+                Texture2D buttonActiveImage = Resources.Load<Texture2D>("CasinoUI/RoyalButtonActive"); // 강조 버튼 이미지
+                panelStyle = new GUIStyle(GUI.skin.box); // 패널 스타일 복사
+                panelStyle.padding = new RectOffset(28, 28, 26, 24); // 패널 안쪽 여백
+                hudStyle = new GUIStyle(GUI.skin.box); // 상태창 스타일 복사
+                if (panelImage != null) // 패널 이미지 확인
+                { // 패널 이미지 적용 시작
+                    panelStyle.normal.background = panelImage; // 공통 패널 배경
+                    hudStyle.normal.background = panelImage; // 상태창 배경
+                } // 패널 이미지 적용 끝
+                promptStyle = new GUIStyle(label); // 상호작용 안내 스타일
+                promptStyle.alignment = TextAnchor.MiddleCenter; // 안내 중앙 정렬
+                button = new GUIStyle(GUI.skin.button) { font = font, fontSize = 18, fixedHeight = 42, wordWrap = true }; // 버튼 스타일
+                button.normal.textColor = Color.white; // 기본 글자 색상
+                button.hover.textColor = Color.white; // 강조 글자 색상
+                button.active.textColor = Color.white; // 선택 글자 색상
+                if (buttonImage != null) button.normal.background = buttonImage; // 기본 버튼 배경
+                if (buttonActiveImage != null) // 강조 이미지 확인
+                { // 강조 이미지 적용 시작
+                    button.hover.background = buttonActiveImage; // 마우스 강조 배경
+                    button.active.background = buttonActiveImage; // 선택 강조 배경
+                    button.focused.background = buttonActiveImage; // 키보드 선택 배경
+                } // 강조 이미지 적용 끝
             } // 글꼴 생성 끝
-            GUI.Box(new Rect(10, 10, 650, 195), ""); // HUD 배경
-            GUI.Label(new Rect(20, 18, 630, 185), "현재 장소: " + MapLayout.Zone(transform.position.x, transform.position.z) + "\n칩: " + game.Chips.ToString("N0") + "   빚: " + game.Debt.ToString("N0") + "\n등급: " + (game.Member.Rank == 0 ? "브론즈" : "실버") + "   누적: " + game.Member.Experience + " EXP   게임 주기: " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap + " EXP\n다음 청구 예상: " + game.PreviewBill(settings).ToString("N0") + "   남은 시간: " + Math.Max(0, (game.NextBill - game.Minutes) / 60).ToString("F1") + "시간\n" + message + "\nWASD 이동 · Shift 달리기 · E 상호작용 · Esc 메뉴", label); // 핵심 정보 표시
+            float hudWidth = Mathf.Min(680, Screen.width - 20); // 화면 폭에 맞춘 상태창
+            GUI.Box(new Rect(10, 10, hudWidth, 195), "", hudStyle); // 상태창 배경
+            GUI.Label(new Rect(35, 28, hudWidth - 50, 160), "현재 장소: " + MapLayout.Zone(transform.position.x, transform.position.z) + "\n칩: " + game.Chips.ToString("N0") + "   빚: " + game.Debt.ToString("N0") + "\n등급: " + (game.Member.Rank == 0 ? "브론즈" : "실버") + "   누적: " + game.Member.Experience + " EXP   게임 주기: " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap + " EXP\n다음 청구 예상: " + game.PreviewBill(settings).ToString("N0") + "   남은 시간: " + Math.Max(0, (game.NextBill - game.Minutes) / 60).ToString("F1") + "시간\n" + message + "\nWASD 이동 · Shift 달리기 · E 상호작용 · Esc 메뉴", label); // 핵심 정보 표시
             if (game.GameOver || game.Escaped) panel = "end"; // 종료 화면 전환
             if (panel == "") // 주변 안내 표시 여부
             { // 주변 안내 시작
-                GUI.Label(new Rect(Screen.width / 2 - 110, Screen.height - 65, 250, 35), NearbyLabel(), label); // 상호작용 안내
+                string nearby = NearbyLabel(); // 가까운 대상 확인
+                if (nearby != "") // 상호작용 대상 확인
+                { // 상호작용 안내 시작
+                    Rect promptRect = new Rect(Screen.width / 2f - 170, Screen.height - 85, 340, 65); // 하단 안내 위치
+                    GUI.Box(promptRect, "", hudStyle); // 안내 배경
+                    GUI.Label(promptRect, nearby, promptStyle); // 상호작용 안내
+                } // 상호작용 안내 끝
                 return; // 열린 화면 없음
             } // 주변 안내 끝
-            Rect panelRect = panel == "blackjack" ? new Rect(Screen.width - 310, 210, 300, 460) : new Rect(Screen.width / 2 - 270, 210, 540, 470); // 게임 화면 위치
-            GUILayout.BeginArea(panelRect, GUI.skin.box); // 대화 상자 시작
+            float panelHeight = Mathf.Min(470, Screen.height - 220); // 화면 높이에 맞춘 패널
+            Rect panelRect = panel == "blackjack" ? new Rect(Screen.width - 350, 210, 340, panelHeight) : panel == "luna" ? new Rect(Screen.width / 2f - 330, Screen.height - 235, 660, 215) : new Rect(Screen.width / 2f - 270, (Screen.height - panelHeight) / 2f, 540, panelHeight); // 화면별 패널 위치
+            GUILayout.BeginArea(panelRect, panelStyle); // 대화 상자 시작
             if (panel == "luna") GUILayout.Label("루나: 21에 가까운 쪽이 이겨요. A는 1 또는 11입니다. 히트로 카드를 받고 스탠드로 멈추세요.", label); // 루나 안내
             if (panel == "work") // 업무 화면
             { // 업무 화면 시작
@@ -256,3 +287,4 @@ namespace Moonlight // 게임 이름 공간
         } // 블랙잭 화면 끝
     } // 시제품 끝
 } // 이름 공간 끝
+
