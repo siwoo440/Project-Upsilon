@@ -45,5 +45,7 @@ class Program // 검증 실행기
         Check(MapLayout.Nearest(1, 5) == "blackjack", "블랙잭 위치 선택"); // 게임 대상 확인
         Check(MapLayout.Nearest(7, 2) == "cashier", "정산 위치 선택"); // 정산 대상 확인
         Check(MapLayout.Nearest(0, -17) == "", "먼 거리 상호작용 차단"); // 거리 제한 확인
+        Check(MenuState.TogglePause("blackjack", "") == "pause", "진행 화면에서 일시정지"); // 일시정지 확인
+        Check(MenuState.TogglePause("pause", "blackjack") == "blackjack", "일시정지 전 화면 복원"); // 게임 화면 복원 확인
     } // 검증 범위 끝
 } // 실행기 끝

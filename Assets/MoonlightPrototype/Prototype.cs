@@ -18,6 +18,7 @@ namespace Moonlight // 게임 이름 공간
         Camera view; // 플레이어 카메라
         float yaw, pitch; // 시점 회전
         string panel = "", message = "루나에게 안내를 받은 뒤 업무와 블랙잭을 이용하세요."; // 현재 화면과 안내
+        string previousPanel = ""; // 일시정지 전 화면
         long bet = 1000000; // 베팅 금액
         GUIStyle label, button; // 화면 글꼴 설정
         string SavePath(string slot) { return Path.Combine(Application.persistentDataPath, "moonlight_" + slot + ".json"); } // 저장 경로
@@ -59,7 +60,15 @@ namespace Moonlight // 게임 이름 공간
         { // 갱신 시작
             var keyboard = Keyboard.current; var mouse = Mouse.current; // 입력 장치 확인
             if (keyboard == null) return; // 키보드 부재 처리
-            if (keyboard.escapeKey.wasPressedThisFrame && !game.GameOver && !game.Escaped) panel = panel == "pause" ? "" : "pause"; // 일시정지 전환
+            if (keyboard.escapeKey.wasPressedThisFrame && !game.GameOver && !game.Escaped) // 일시정지 입력
+            { // 정지 전환 시작
+                string nextPanel = MenuState.TogglePause(panel, previousPanel); // 전환할 화면 확인
+                if (panel != "pause") // 이전 화면 보관 여부
+                { // 이전 화면 보관 시작
+                    previousPanel = panel; // 기존 게임 화면 보관
+                } // 이전 화면 보관 끝
+                panel = nextPanel; // 화면 전환 적용
+            } // 정지 전환 끝
             if (panel == "pause") { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; return; } // 정지 중 시계 중단
             if (!game.GameOver && !game.Escaped) Advance(Time.deltaTime * settings.minutesPerSecond); // 연속 시계 진행
             if (keyboard.f5Key.wasPressedThisFrame) Save("manual"); // 수동 저장 단축키

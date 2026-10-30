@@ -1,6 +1,13 @@
 using System; // 기본 계산 사용
 namespace Moonlight // 게임 이름 공간
 { // 이름 공간 시작
+    public static class MenuState // 메뉴 상태 전환
+    { // 메뉴 상태 시작
+        public static string TogglePause(string current, string previous) // 일시정지 전환
+        { // 전환 시작
+            return current == "pause" ? previous : "pause"; // 이전 화면 또는 정지 화면
+        } // 전환 끝
+    } // 메뉴 상태 끝
     public static class MapLayout // 상호작용 위치 정의
     { // 위치 정의 시작
         public static string Nearest(float x, float z) // 가장 가까운 대상 찾기
