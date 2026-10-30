@@ -10,6 +10,12 @@ public static class DayTwoValidation // 이동 경로 검증 도구
     { // 검사 시작
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); // 임시 장면 생성
         CasinoMap.Build(); // 카지노 맵 생성
+        GameObject table = GameObject.Find("블랙잭 모델"); // 가져온 테이블 확인
+        if (table == null || table.GetComponentsInChildren<MeshRenderer>().Length < 3 || table.GetComponent<BoxCollider>() == null) // 모델과 충돌체 확인
+        { // 모델 실패 시작
+            throw new Exception("블랙잭 모델 가져오기 실패"); // 실패 알림
+        } // 모델 실패 끝
+        Debug.Log("BLACKJACK_MODEL_OK"); // 모델 검증 성공
         Physics.SyncTransforms(); // 충돌 위치 반영
         Queue<Vector2Int> queue = new Queue<Vector2Int>(); // 탐색 대기열
         HashSet<Vector2Int> seen = new HashSet<Vector2Int>(); // 방문 위치 기록

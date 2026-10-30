@@ -36,9 +36,33 @@ namespace Moonlight // 게임 이름 공간
         } // 상자 생성 끝
         static void Table(float x, float z, string name) // 테이블 모형
         { // 테이블 생성 시작
+            if (name == "블랙잭" && PlaceBlackjack(x, z)) // 블랙잭 모델 배치 확인
+            { // 모델 사용 시작
+                return; // 임시 도형 생략
+            } // 모델 사용 끝
             Shape(name + " 받침", PrimitiveType.Cylinder, new Vector3(x, 0.45f, z), new Vector3(1.25f, 0.45f, 0.8f), gold); // 금색 테이블 받침
             Shape(name + " 천", PrimitiveType.Cylinder, new Vector3(x, 0.93f, z), new Vector3(1.13f, 0.06f, 0.7f), green, false); // 녹색 테이블 천
         } // 테이블 생성 끝
+        static bool PlaceBlackjack(float x, float z) // 블랙잭 모델 배치
+        { // 모델 배치 시작
+            GameObject asset = Resources.Load<GameObject>("Casino/BlackjackTable"); // 모델 에셋 읽기
+            if (asset == null) // 에셋 누락 확인
+            { // 대체 처리 시작
+                return false; // 임시 도형 사용
+            } // 대체 처리 끝
+            GameObject table = Object.Instantiate(asset, root); // 테이블 모델 생성
+            table.name = "블랙잭 모델"; // 테이블 이름
+            table.transform.position = new Vector3(x, 0, z); // 기존 테이블 위치
+            foreach (Renderer part in table.GetComponentsInChildren<Renderer>()) // 모델 부품 반복
+            { // 부품 재질 시작
+                string partName = part.gameObject.name; // 부품 이름 확인
+                part.sharedMaterial = partName.Contains("Felt") ? green : partName.Contains("Burgundy") || partName.Contains("Chip 0") || partName.Contains("Chip 2") ? burgundy : partName.Contains("pedestal") && !partName.Contains("foot") ? black : gold; // 부품별 임시 재질
+            } // 부품 재질 끝
+            BoxCollider collider = table.AddComponent<BoxCollider>(); // 테이블 충돌체 추가
+            collider.center = new Vector3(0, 0.54f, -0.18f); // 충돌체 중심
+            collider.size = new Vector3(3.02f, 1.08f, 1.46f); // 충돌체 크기
+            return true; // 모델 배치 완료
+        } // 모델 배치 끝
         static void Column(float x, float z) // 기둥 모형
         { // 기둥 생성 시작
             Box("기둥", x, 2, z, 0.65f, 4, 0.65f, black); // 검은 기둥
