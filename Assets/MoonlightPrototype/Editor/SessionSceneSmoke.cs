@@ -10,6 +10,7 @@ public static class SessionSceneSmoke // 씬 간 상태 유지 검사
     static AsyncOperation unloading; // 씬 종료 작업
     static GameState original; // 기존 게임 상태
     static int duplicateFrames; // 중복 객체 검사 대기
+    static bool loadRequested; // 저장 복구 요청 상태
     static bool oldEnabled; // 기존 플레이 설정
     static EnterPlayModeOptions oldOptions; // 기존 세부 설정
     static string oldProduct; // 기존 제품 이름
@@ -44,6 +45,9 @@ public static class SessionSceneSmoke // 씬 간 상태 유지 검사
                 original.WorkRemaining = 50; // 업무 남은 시간
                 original.Round.phase = 1; // 진행 중 라운드
                 original.Round.wager = 100; // 예약된 베팅금
+                typeof(Prototype).GetMethod("Save", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(player, new object[] { "manual" }); // 현재 씬 저장
+                string saved = System.IO.File.ReadAllText(System.IO.Path.Combine(Application.persistentDataPath, "moonlight_manual.json")); // 검사용 저장 파일
+                if (!saved.Contains("Assets/Moonlight/Prototype.unity")) throw new Exception("저장 파일에 씬 경로가 없습니다."); // 저장 위치 확인
                 Scene oldScene = SceneManager.GetActiveScene(); // 기존 씬 보관
                 Scene nextScene = SceneManager.CreateScene("SessionSmokeDestination"); // 임시 도착 씬
                 SceneManager.SetActiveScene(nextScene); // 도착 씬 활성화
@@ -62,7 +66,16 @@ public static class SessionSceneSmoke // 씬 간 상태 유지 검사
             if (survivor == null) throw new Exception("씬 전환 중 플레이어가 사라졌습니다."); // 플레이어 유지 확인
             if (UnityEngine.Object.FindObjectsByType<Prototype>(FindObjectsSortMode.None).Length != 1) throw new Exception("플레이어가 중복 생성됐습니다."); // 중복 세션 확인
             GameState current = (GameState)typeof(Prototype).GetField("game", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(survivor); // 유지된 게임 상태
-            if (!ReferenceEquals(current, original) || current.Chips != 12345678 || !current.WorkActive || current.Round.wager != 100) throw new Exception("진행 중 게임 상태가 유지되지 않았습니다."); // 상태 보존 확인
+            if (!loadRequested) // 저장 복구 전 확인
+            { // 저장 복구 시작
+                if (!ReferenceEquals(current, original) || current.Chips != 12345678 || !current.WorkActive || current.Round.wager != 100) throw new Exception("진행 중 게임 상태가 유지되지 않았습니다."); // 상태 보존 확인
+                if (!survivor.TravelToScene("Assets/Moonlight/Prototype.unity", new Vector3(2, 0.1f, -10))) throw new Exception("등록된 씬 이동에 실패했습니다."); // 실제 씬 이동 확인
+                if (Vector3.Distance(survivor.transform.position, new Vector3(2, 0.1f, -10)) > 0.01f) throw new Exception("씬 도착 위치가 다릅니다."); // 도착 위치 확인
+                loadRequested = true; // 저장 복구 요청 기록
+                typeof(Prototype).GetMethod("Load", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(survivor, new object[] { "manual" }); // 저장 씬 복구
+                return; // 복구 완료 대기
+            } // 저장 복구 끝
+            if (SceneManager.GetActiveScene().path != "Assets/Moonlight/Prototype.unity" || current.Chips != 12345678 || !current.WorkActive || current.Round.wager != 100) throw new Exception("저장된 씬과 게임 상태가 복구되지 않았습니다."); // 씬과 상태 복구 확인
             Debug.Log("SESSION_SCENE_SMOKE_OK"); // 검사 성공 기록
             Finish(0); // 정상 종료
         } // 검사 시도 끝

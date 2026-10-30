@@ -2,12 +2,14 @@ using System; // 기본 기능 사용
 using System.IO; // 저장 파일 사용
 using UnityEngine; // 유니티 기능 사용
 using UnityEngine.InputSystem; // 새 입력 시스템 사용
+using UnityEngine.SceneManagement; // 씬 전환 기능
 namespace Moonlight // 게임 이름 공간
 { // 이름 공간 시작
     [Serializable] public class SaveData // 저장 자료 묶음
     { // 저장 자료 시작
         public int version = 1; // 저장 형식 버전
         public GameState state; // 경제와 게임 상태
+        public string scenePath; // 저장된 씬 경로
         public float x, y, z, yaw, pitch; // 위치와 시점
     } // 저장 자료 끝
     public partial class Prototype : MonoBehaviour // 시제품 화면과 입력
@@ -48,7 +50,7 @@ namespace Moonlight // 게임 이름 공간
         { // 저장 시작
             try // 파일 오류 처리
             { // 시도 시작
-                var data = new SaveData { state = game, x = transform.position.x, y = transform.position.y, z = transform.position.z, yaw = yaw, pitch = pitch }; // 저장 자료 구성
+                var data = new SaveData { state = game, scenePath = SceneManager.GetActiveScene().path, x = transform.position.x, y = transform.position.y, z = transform.position.z, yaw = yaw, pitch = pitch }; // 저장 자료 구성
                 File.WriteAllText(SavePath(slot), JsonUtility.ToJson(data, true)); // 슬롯에 기록
                 message = "저장 완료: " + slot; // 저장 안내
             } // 시도 끝
@@ -60,6 +62,12 @@ namespace Moonlight // 게임 이름 공간
             { // 시도 시작
                 var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath(slot))); // 저장 자료 읽기
                 if (data == null || data.version != 1 || data.state == null) throw new Exception("지원하지 않는 저장 데이터"); // 저장 형식 확인
+                string targetScene = string.IsNullOrEmpty(data.scenePath) ? "Assets/Moonlight/Prototype.unity" : data.scenePath; // 이전 저장의 기본 씬
+                if (SceneManager.GetActiveScene().path != targetScene) // 저장 씬 확인
+                { // 씬 복구 시작
+                    if (!Application.CanStreamedLevelBeLoaded(targetScene)) throw new Exception("저장된 씬을 불러올 수 없습니다: " + targetScene); // 씬 등록 확인
+                    SceneManager.LoadScene(targetScene, LoadSceneMode.Single); // 저장된 씬 열기
+                } // 씬 복구 끝
                 game = data.state; game.EnsureMembership(); controller.enabled = false; transform.position = new Vector3(data.x, data.y, data.z); controller.enabled = true; // 상태와 위치 복원
                 yaw = data.yaw; pitch = data.pitch; panel = game.Seated ? "blackjack" : ""; announcedRank = game.Member.Rank; message = "불러오기 완료: " + slot; // 시점과 화면 복원
                 UpdateCameraPose(); // 착석 시점 복원
@@ -105,6 +113,18 @@ namespace Moonlight // 게임 이름 공간
         { // 시간 처리 시작
             GameClock.Advance(game, settings, elapsed, OnClockEvent); // 시간과 청구 진행
         } // 시간 처리 끝
+        public bool TravelToScene(string scenePath, Vector3 spawn) // 다른 씬으로 이동
+        { // 씬 이동 시작
+            if (game == null || game.GameOver || game.Escaped || game.Seated || !Application.CanStreamedLevelBeLoaded(scenePath)) return false; // 이동 가능 상태 확인
+            SceneManager.LoadScene(scenePath, LoadSceneMode.Single); // 대상 씬 열기
+            controller.enabled = false; // 이동 충돌 잠시 해제
+            transform.position = spawn; // 도착 위치 적용
+            controller.enabled = true; // 이동 충돌 복원
+            panel = ""; // 이전 상호작용 화면 닫기
+            UpdateCameraPose(); // 이동 시점 복원
+            Save("event"); // 씬 이동 자동 저장
+            return true; // 이동 성공 전달
+        } // 씬 이동 끝
         void OnClockEvent(string eventName) // 시계 이벤트 반영
         { // 이벤트 처리 시작
             if (eventName == "before_bill" || eventName == "after_bill") // 청구 저장 시점
