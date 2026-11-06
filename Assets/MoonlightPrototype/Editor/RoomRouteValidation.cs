@@ -30,8 +30,7 @@ public static class RoomRouteValidation // 객실 이동 경로 검사
                 if (!Physics.CheckCapsule(bottom, bottom + Vector3.up * 1.05f, 0.3f)) queue.Enqueue(next); // 충돌 없는 위치 추가
             } // 인접 확인 끝
         } // 탐색 끝
-        if (!reached.Contains("bed") || !reached.Contains("lobby")) throw new Exception("객실 침대 또는 출입문까지 이동할 수 없습니다."); // 필수 경로 확인
+        if (!reached.Contains("bed") || !reached.Contains("lobby") || !reached.Contains("publichall")) throw new Exception("객실 침대 또는 출입문까지 이동할 수 없습니다."); // 필수 경로 확인
         Debug.Log("ROOM_ROUTE_OK " + visited.Count); // 검사 성공 표시
     } // 검사 끝
 } // 검사 끝
-

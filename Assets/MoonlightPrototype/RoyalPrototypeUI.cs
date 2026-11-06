@@ -16,6 +16,7 @@ namespace Moonlight // 게임 이름 공간
             { // 이미지 읽기 시작
                 royalImages[name] = Resources.Load<Texture2D>("CasinoUI/Components/" + name); // 리소스 이미지 읽기
             } // 이미지 읽기 끝
+            royalImages["icon_hotel_hall"] = Resources.Load<Texture2D>("CasinoUI/Components/icon_hotel_hall"); // 공용 복도 아이콘
             Font font = Font.CreateDynamicFontFromOSFont("Malgun Gothic", 24); // 한글 시스템 글꼴
             royalText = new GUIStyle(GUI.skin.label) { font = font, fontSize = 24, wordWrap = true }; // 기본 글자 스타일
             royalText.clipping = TextClipping.Clip; // 글자 표시 영역 제한
@@ -104,6 +105,8 @@ namespace Moonlight // 게임 이름 공간
             if (nearby == "") return; // 대상 없음 확인
             RoyalImage("work_row", new Rect(700, 910, 520, 110)); // 안내 배경
             RoyalImage("prompt_keycap", new Rect(755, 935, 55, 55), true); // 상호작용 키 그림
+            string target = SceneInteractionPoint.Nearest(transform.position); // 현재 상호작용 대상
+            if (target == "publichall" || target == "casino" || target == "guestroom") RoyalImage("icon_hotel_hall", new Rect(1120, 930, 65, 65), true); // 출입 안내 아이콘
             RoyalLabel(new Rect(773, 946, 30, 32), "E", royalText); // 상호작용 키 글자
             RoyalLabel(new Rect(825, 945, 330, 35), nearby.Replace("E: ", ""), royalText); // 상호작용 이름
         } // 주변 안내 끝
@@ -256,4 +259,3 @@ namespace Moonlight // 게임 이름 공간
         } // 결과 화면 끝
     } // UI 구성 끝
 } // 이름 공간 끝
-

@@ -203,6 +203,28 @@ namespace Moonlight // 게임 이름 공간
                 if (!TravelToScene("Assets/Moonlight/Prototype.unity", new Vector3(12, 0.1f, -15))) message = "지금은 로비로 이동할 수 없습니다."; // 카지노 씬 이동
                 return; // 상호작용 종료
             } // 카지노 복귀 끝
+            if (target == "publichall") // 호텔 공용 복도 확인
+            { // 공용 복도 이동 시작
+                bool fromRoom = SceneManager.GetActiveScene().path == "Assets/Moonlight/Room.unity"; // 출발 장소 확인
+                Vector3 entrance = new Vector3(0, 0.1f, fromRoom ? 6 : -6); // 출발 장소별 도착 위치
+                if (!TravelToScene("Assets/Moonlight/HotelHall.unity", entrance)) message = "지금은 복도로 이동할 수 없습니다."; // 공용 복도 이동
+                return; // 상호작용 종료
+            } // 공용 복도 이동 끝
+            if (target == "casino") // 카지노 입구 확인
+            { // 카지노 입구 이동 시작
+                if (!TravelToScene("Assets/Moonlight/Prototype.unity", new Vector3(18, 0.1f, -15))) message = "지금은 카지노로 이동할 수 없습니다."; // 카지노 씬 이동
+                return; // 상호작용 종료
+            } // 카지노 입구 이동 끝
+            if (target == "guestroom") // 객실 복도 문 확인
+            { // 객실 복도 이동 시작
+                if (!TravelToScene("Assets/Moonlight/Room.unity", new Vector3(3, 0.1f, -3))) message = "지금은 객실로 이동할 수 없습니다."; // 객실 씬 이동
+                return; // 상호작용 종료
+            } // 객실 복도 이동 끝
+            if (target == "elevator" || target == "staff") // 후속 시설 확인
+            { // 시설 안내 시작
+                message = target == "elevator" ? "엘리베이터는 준비 중입니다." : "직원 구역은 준비 중입니다."; // 시설 준비 안내
+                return; // 상호작용 종료
+            } // 시설 안내 끝
             if (target == "blackjack" && game.SitAtBlackjack()) // 블랙잭 착석 확인
             { // 착석 처리 시작
                 UpdateCameraPose(); // 테이블 시점 적용
@@ -220,6 +242,11 @@ namespace Moonlight // 게임 이름 공간
             if (target == "room") return "E: 객실로 이동"; // 객실 이동 안내
             if (target == "lobby") return "E: 카지노로 돌아가기"; // 카지노 복귀 안내
             if (target == "bed") return "E: 침대에서 휴식"; // 휴식 안내
+            if (target == "publichall") return "E: 호텔 공용 복도"; // 공용 복도 안내
+            if (target == "casino") return "E: 카지노 메인 홀"; // 카지노 입구 안내
+            if (target == "guestroom") return "E: 플레이어 객실"; // 객실 입구 안내
+            if (target == "elevator") return "E: 엘리베이터"; // 엘리베이터 안내
+            if (target == "staff") return "E: 직원 구역"; // 직원 구역 안내
             return ""; // 주변 대상 없음
         } // 안내 끝
         void UpdateCameraPose() // 착석과 이동 시점 전환
@@ -248,4 +275,3 @@ namespace Moonlight // 게임 이름 공간
         } // 카드 이름 변환 끝
     } // 시제품 끝
 } // 이름 공간 끝
-

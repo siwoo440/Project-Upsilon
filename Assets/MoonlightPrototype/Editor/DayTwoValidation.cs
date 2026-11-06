@@ -23,7 +23,7 @@ public static class DayTwoValidation // 이동 경로 검증 도구
         } // 재질 확인 끝
         Debug.Log("SCENE_ENVIRONMENT_ASSETS_OK"); // 저장된 재질 검증 성공
         GameObject anchors = GameObject.Find("Interaction Targets"); // 상호작용 위치 묶음 확인
-        if (anchors == null || anchors.transform.childCount != 5) throw new Exception("장면에 상호작용 지점이 없습니다."); // 지점 저장 확인
+        if (anchors == null || anchors.transform.childCount != 6) throw new Exception("장면에 상호작용 지점이 없습니다."); // 지점 저장 확인
         SceneInteractionPoint[] points = anchors.GetComponentsInChildren<SceneInteractionPoint>(); // 저장된 지점 목록
         foreach (SceneInteractionPoint point in anchors.GetComponentsInChildren<SceneInteractionPoint>()) // 저장된 지점 확인
         { // 지점 확인 시작
@@ -71,7 +71,7 @@ public static class DayTwoValidation // 이동 경로 검증 도구
                 } // 이동 가능 끝
             } // 인접 탐색 끝
         } // 탐색 끝
-        foreach (string name in new string[] { "luna", "work", "blackjack", "cashier", "room" }) // 필수 대상 확인
+        foreach (string name in new string[] { "luna", "work", "blackjack", "cashier", "room", "publichall" }) // 필수 대상 확인
         { // 대상 검사 시작
             if (!reached.Contains(name)) // 도달 실패 확인
             { // 실패 처리 시작
@@ -151,4 +151,3 @@ public static class DayTwoValidation // 이동 경로 검증 도구
         Debug.Log("SPRINT_SCENE_OK"); // 달리기 설정 검증 성공
     } // 검사 끝
 } // 검증 도구 끝
-
