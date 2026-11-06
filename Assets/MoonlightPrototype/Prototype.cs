@@ -1,4 +1,5 @@
 using System; // 기본 기능 사용
+using System.Collections; // 씬 로딩 대기 기능
 using System.IO; // 저장 파일 사용
 using UnityEngine; // 유니티 기능 사용
 using UnityEngine.InputSystem; // 새 입력 시스템 사용
@@ -16,6 +17,7 @@ namespace Moonlight // 게임 이름 공간
     { // 시제품 시작
         public GameSettings settings = new GameSettings(); // 인스펙터에서 조정할 설정
         static Prototype activeSession; // 유지 중인 플레이어 세션
+        bool isTransitioning, restoringSave; // 씬 전환과 저장 복구 상태
         GameState game; // 현재 게임 상태
         CharacterController controller; // 이동 충돌 처리
         Camera view; // 플레이어 카메라
@@ -66,22 +68,41 @@ namespace Moonlight // 게임 이름 공간
         { // 불러오기 시작
             try // 파일 오류 처리
             { // 시도 시작
+                if (isTransitioning) throw new Exception("씬 전환 중에는 불러올 수 없습니다."); // 중복 씬 전환 방지
                 var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath(slot))); // 저장 자료 읽기
                 if (data == null || data.version != 1 || data.state == null) throw new Exception("지원하지 않는 저장 데이터"); // 저장 형식 확인
                 string targetScene = string.IsNullOrEmpty(data.scenePath) ? "Assets/Moonlight/Prototype.unity" : data.scenePath; // 이전 저장의 기본 씬
                 if (SceneManager.GetActiveScene().path != targetScene) // 저장 씬 확인
                 { // 씬 복구 시작
                     if (!Application.CanStreamedLevelBeLoaded(targetScene)) throw new Exception("저장된 씬을 불러올 수 없습니다: " + targetScene); // 씬 등록 확인
-                    SceneManager.LoadScene(targetScene, LoadSceneMode.Single); // 저장된 씬 열기
+                    StartCoroutine(RestoreScene(targetScene, data, slot)); // 저장 씬 로딩 시작
+                    return; // 로딩 완료 대기
                 } // 씬 복구 끝
-                game = data.state; game.EnsureMembership(); controller.enabled = false; transform.position = new Vector3(data.x, data.y, data.z); controller.enabled = true; // 상태와 위치 복원
-                yaw = data.yaw; pitch = data.pitch; panel = game.Seated ? "blackjack" : ""; announcedRank = game.Member.Rank; message = "불러오기 완료: " + slot; // 시점과 화면 복원
-                UpdateCameraPose(); // 착석 시점 복원
+                ApplySave(data, slot); // 같은 씬 저장 복구
             } // 시도 끝
             catch (Exception ex) { message = "불러오기 실패: " + ex.Message; } // 오류 표시
         } // 불러오기 끝
+        void ApplySave(SaveData data, string slot) // 저장 상태 적용
+        { // 상태 적용 시작
+            game = data.state; game.EnsureMembership(); controller.enabled = false; transform.position = new Vector3(data.x, data.y, data.z); controller.enabled = true; // 상태와 위치 복원
+            yaw = data.yaw; pitch = data.pitch; panel = game.Seated ? "blackjack" : game.RestActive ? "resting" : ""; announcedRank = game.Member.Rank; message = "불러오기 완료: " + slot; // 시점과 화면 복원
+            UpdateCameraPose(); // 착석 시점 복원
+        } // 상태 적용 끝
+        IEnumerator RestoreScene(string targetScene, SaveData data, string slot) // 저장 씬 비동기 복구
+        { // 씬 복구 시작
+            isTransitioning = true; restoringSave = true; // 복구 중 입력과 시간 제한
+            AsyncOperation operation = SceneManager.LoadSceneAsync(targetScene, LoadSceneMode.Single); // 저장 씬 불러오기
+            yield return operation; // 씬 로딩 완료 대기
+            ApplySave(data, slot); // 로딩 후 저장 상태 적용
+            isTransitioning = false; restoringSave = false; // 정상 진행 복원
+        } // 씬 복구 끝
         void Update() // 매 프레임 진행
         { // 갱신 시작
+            if (isTransitioning) // 씬 로딩 상태 확인
+            { // 전환 시간 처리 시작
+                if (!restoringSave && !game.GameOver && !game.Escaped) Advance(Time.deltaTime * settings.minutesPerSecond); // 이동 중 게임 시계 진행
+                return; // 전환 중 입력 차단
+            } // 전환 시간 처리 끝
             var keyboard = Keyboard.current; var mouse = Mouse.current; // 입력 장치 확인
             if (keyboard == null) return; // 키보드 부재 처리
             if (keyboard.escapeKey.wasPressedThisFrame && !game.GameOver && !game.Escaped) // 일시정지 입력
@@ -121,16 +142,23 @@ namespace Moonlight // 게임 이름 공간
         } // 시간 처리 끝
         public bool TravelToScene(string scenePath, Vector3 spawn) // 다른 씬으로 이동
         { // 씬 이동 시작
-            if (game == null || game.GameOver || game.Escaped || game.Seated || !Application.CanStreamedLevelBeLoaded(scenePath)) return false; // 이동 가능 상태 확인
-            SceneManager.LoadScene(scenePath, LoadSceneMode.Single); // 대상 씬 열기
+            if (game == null || game.GameOver || game.Escaped || game.Seated || game.RestActive || isTransitioning || !Application.CanStreamedLevelBeLoaded(scenePath)) return false; // 이동 가능 상태 확인
+            StartCoroutine(TravelScene(scenePath, spawn)); // 씬 이동 요청
+            return true; // 이동 요청 성공
+        } // 씬 이동 끝
+        IEnumerator TravelScene(string scenePath, Vector3 spawn) // 씬 로딩과 도착 처리
+        { // 씬 이동 처리 시작
+            isTransitioning = true; // 중복 이동과 입력 차단
+            AsyncOperation operation = SceneManager.LoadSceneAsync(scenePath, LoadSceneMode.Single); // 대상 씬 로딩
+            yield return operation; // 씬 로딩 완료 대기
             controller.enabled = false; // 이동 충돌 잠시 해제
             transform.position = spawn; // 도착 위치 적용
             controller.enabled = true; // 이동 충돌 복원
             panel = ""; // 이전 상호작용 화면 닫기
             UpdateCameraPose(); // 이동 시점 복원
-            Save("event"); // 씬 이동 자동 저장
-            return true; // 이동 성공 전달
-        } // 씬 이동 끝
+            if (!game.GameOver && !game.Escaped) Save("event"); // 도착 후 자동 저장
+            isTransitioning = false; // 이동 입력 복원
+        } // 씬 이동 처리 끝
         void OnClockEvent(string eventName) // 시계 이벤트 반영
         { // 이벤트 처리 시작
             if (eventName == "before_bill" || eventName == "after_bill") // 청구 저장 시점
@@ -150,6 +178,12 @@ namespace Moonlight // 게임 이름 공간
                 Save("event"); // 업무 완료 저장
                 message = "업무 완료: 보수와 경험치 지급"; // 보상 안내
             } // 업무 완료 끝
+            if (eventName == "rest_done") // 휴식 완료 확인
+            { // 휴식 완료 시작
+                panel = ""; // 휴식 화면 종료
+                Save("event"); // 휴식 완료 저장
+                message = "휴식을 마치고 정력을 회복했습니다."; // 휴식 완료 안내
+            } // 휴식 완료 끝
         } // 이벤트 처리 끝
         void Interact() // 가까운 장소 이용
         { // 상호작용 시작
@@ -159,6 +193,16 @@ namespace Moonlight // 게임 이름 공간
                 message = "가까운 장소에서 E를 누르세요."; // 거리 안내
                 return; // 상호작용 중단
             } // 거리 안내 끝
+            if (target == "room") // 객실 이동 확인
+            { // 객실 이동 시작
+                if (!TravelToScene("Assets/Moonlight/Room.unity", new Vector3(0, 0.1f, -3))) message = "지금은 객실로 이동할 수 없습니다."; // 객실 씬 이동
+                return; // 상호작용 종료
+            } // 객실 이동 끝
+            if (target == "lobby") // 카지노 복귀 확인
+            { // 카지노 복귀 시작
+                if (!TravelToScene("Assets/Moonlight/Prototype.unity", new Vector3(12, 0.1f, -15))) message = "지금은 로비로 이동할 수 없습니다."; // 카지노 씬 이동
+                return; // 상호작용 종료
+            } // 카지노 복귀 끝
             if (target == "blackjack" && game.SitAtBlackjack()) // 블랙잭 착석 확인
             { // 착석 처리 시작
                 UpdateCameraPose(); // 테이블 시점 적용
@@ -173,6 +217,9 @@ namespace Moonlight // 게임 이름 공간
             if (target == "work") return "E: 호텔 업무"; // 업무 안내
             if (target == "blackjack") return "E: 블랙잭 의자에 앉기"; // 게임 안내
             if (target == "cashier") return "E: 정산 창구"; // 정산 안내
+            if (target == "room") return "E: 객실로 이동"; // 객실 이동 안내
+            if (target == "lobby") return "E: 카지노로 돌아가기"; // 카지노 복귀 안내
+            if (target == "bed") return "E: 침대에서 휴식"; // 휴식 안내
             return ""; // 주변 대상 없음
         } // 안내 끝
         void UpdateCameraPose() // 착석과 이동 시점 전환

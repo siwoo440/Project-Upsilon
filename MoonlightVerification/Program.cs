@@ -11,6 +11,47 @@ class Program // 검증 실행기
     static void Main() // 검증 시작
     { // 검증 범위 시작
         var settings = new GameSettings(); // 기본 설정 생성
+        var rest = new GameState(settings); // 휴식 검증 상태
+        rest.Energy = 10; // 부족한 정력 설정
+        Check(rest.StartRest(settings), "무료 휴식 시작"); // 휴식 시작 확인
+        GameClock.Advance(rest, settings, 60, null); // 휴식 시간 진행
+        Check(rest.Energy == 30 && !rest.RestActive, "휴식 후 정력 회복"); // 정력 회복 확인
+        GameClock.Advance(rest, settings, 1, null); // 휴식 이후 진행
+        Check(rest.Energy == 30, "휴식 보상 중복 방지"); // 중복 회복 확인
+        var interruptedRest = new GameState(settings); // 청구와 휴식 검증 상태
+        interruptedRest.Energy = 0; interruptedRest.Chips = 0; interruptedRest.NextBill = 60; // 청구와 휴식 시각 설정
+        Check(interruptedRest.StartRest(settings), "청구 직전 휴식 시작"); // 휴식 시작 확인
+        GameClock.Advance(interruptedRest, settings, 60, null); // 청구 시각 진행
+        Check(interruptedRest.GameOver && interruptedRest.Energy == 0, "청구 실패 시 미확정 휴식 제외"); // 청구 우선 확인
+        var cappedRest = new GameState(settings); // 정력 상한 검증 상태
+        cappedRest.Energy = 95; // 최대치 근처 정력
+        Check(cappedRest.StartRest(settings), "최대치 근처 휴식 시작"); // 휴식 시작 확인
+        cappedRest.StartWork(settings); // 휴식 중 업무 시작 시도
+        Check(!cappedRest.WorkActive && !cappedRest.SitAtBlackjack(), "휴식 중 다른 활동 제한"); // 활동 중복 방지
+        GameClock.Advance(cappedRest, settings, 60, null); // 휴식 완료 진행
+        Check(cappedRest.Energy == cappedRest.MaxEnergy, "정력 최대치 제한"); // 정력 상한 확인
+        var midRest = new GameState(settings); // 휴식 중 저장 검증 상태
+        midRest.Energy = 10; midRest.StartRest(settings); // 휴식 시작 상태
+        GameClock.Advance(midRest, settings, 25, null); // 휴식 일부 진행
+        var restOptions = new JsonSerializerOptions { IncludeFields = true }; // 저장 필드 설정
+        var restoredRest = JsonSerializer.Deserialize<GameState>(JsonSerializer.Serialize(midRest, restOptions), restOptions); // 휴식 상태 저장 복구
+        Check(restoredRest.RestActive && restoredRest.RestRemaining == 35 && restoredRest.Energy == 10, "휴식 진행 상태 복구"); // 저장 상태 확인
+        GameClock.Advance(restoredRest, settings, 35, null); // 남은 휴식 진행
+        Check(restoredRest.Energy == 30 && !restoredRest.RestActive, "복구 후 휴식 단일 완료"); // 회복 중복 방지
+        var oldRestSave = JsonSerializer.Deserialize<GameState>("{\"Chips\":1234}", restOptions); // 정력 추가 전 저장 복구
+        Check(oldRestSave.Energy == 100 && oldRestSave.MaxEnergy == 100 && !oldRestSave.RestActive, "기존 저장의 기본 정력"); // 이전 저장 호환
+        var boundaryRest = new GameState(settings); // 청구 동시 휴식 검증 상태
+        boundaryRest.Chips = 122400000; boundaryRest.NextBill = 60; boundaryRest.Energy = 10; // 첫 청구 자금과 휴식 시각
+        boundaryRest.StartRest(settings); // 휴식 시작
+        string restAfterBill = ""; // 청구 직후 저장 자료
+        GameClock.Advance(boundaryRest, settings, 60, name => // 청구와 휴식 동시 진행
+        { // 저장 알림 시작
+            if (name == "after_bill") restAfterBill = JsonSerializer.Serialize(boundaryRest, restOptions); // 정산 직후 상태 보관
+        }); // 저장 알림 끝
+        var restoredBoundary = JsonSerializer.Deserialize<GameState>(restAfterBill, restOptions); // 정산 직후 상태 복구
+        string restEvents = ""; // 복구 후 이벤트 순서
+        GameClock.Advance(restoredBoundary, settings, settings.billingHours * 60, name => restEvents += name + ","); // 다음 청구까지 진행
+        Check(restEvents.StartsWith("rest_done,") && restoredBoundary.Energy == 30 && restoredBoundary.GameOver, "정산 직후 복구 시 휴식 먼저 확정"); // 동일 시각 휴식 순서 확인
         var game = new GameState(settings); // 초기 상태 생성
         Check(game.PreviewBill(settings) == 122400000, "첫 청구액"); // 청구액 확인
         game.Chips = 122400000; // 납부 자금 설정
@@ -182,3 +223,4 @@ class Program // 검증 실행기
         Check(seatedRestore.Chips == beforeSettlement + 1000000 && seatedRestore.LeaveBlackjack(), "복구 게임 단일 정산 후 퇴장"); // 중복 지급 방지 확인
     } // 검증 범위 끝
 } // 실행기 끝
+

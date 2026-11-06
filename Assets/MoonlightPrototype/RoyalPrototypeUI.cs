@@ -11,7 +11,7 @@ namespace Moonlight // 게임 이름 공간
         { // 준비 시작
             if (royalImages != null) return; // 중복 초기화 방지
             royalImages = new Dictionary<string, Texture2D>(); // 이미지 목록 생성
-            string[] names = { "hud_frame", "countdown_frame", "dialogue_frame", "work_row", "save_slot", "notice_frame", "prompt_keycap", "icon_chips", "icon_debt", "icon_rank", "icon_experience", "icon_bill_clock", "icon_work", "icon_locked", "icon_hit", "icon_stand", "work_bed", "rank_silver", "result_victory_badge", "result_defeat_badge", "result_draw_badge", "brand_moon", "button_confirm_gold", "button_secondary_dark", "button_selected", "portrait_luna", "portrait_player", "repayment_medallion", "background_gameover", "background_victory" }; // 사용할 이미지 이름
+            string[] names = { "hud_frame", "countdown_frame", "dialogue_frame", "work_row", "save_slot", "notice_frame", "prompt_keycap", "icon_chips", "icon_debt", "icon_rank", "icon_experience", "icon_energy", "icon_bill_clock", "icon_work", "icon_locked", "icon_hit", "icon_stand", "work_bed", "rank_silver", "result_victory_badge", "result_defeat_badge", "result_draw_badge", "brand_moon", "button_confirm_gold", "button_secondary_dark", "button_selected", "portrait_luna", "portrait_player", "repayment_medallion", "background_gameover", "background_victory" }; // 사용할 이미지 이름
             foreach (string name in names) // 각 이미지 확인
             { // 이미지 읽기 시작
                 royalImages[name] = Resources.Load<Texture2D>("CasinoUI/Components/" + name); // 리소스 이미지 읽기
@@ -74,15 +74,16 @@ namespace Moonlight // 게임 이름 공간
                 if (panel == "work") DrawRoyalWork(); // 업무 선택 출력
                 if (panel == "blackjack") DrawRoyalBlackjack(); // 블랙잭 조작 출력
                 if (panel == "cashier") DrawRoyalCashier(); // 상환 창구 출력
+                if (panel == "bed" || panel == "resting") DrawRoyalRest(); // 휴식 안내 출력
                 if (panel == "pause") DrawRoyalPause(); // 일시정지 출력
             } // 진행 화면 끝
             GUI.matrix = previousMatrix; // 기존 화면 변환 복원
         } // UI 출력 끝
         void DrawRoyalHud() // 상단 상태 정보 출력
         { // 상태 정보 시작
-            string[] icons = { "icon_chips", "icon_debt", "icon_rank", "icon_experience" }; // 상태별 아이콘
-            string[] values = { game.Chips.ToString("N0"), game.Debt.ToString("N0"), game.Member.Rank == 0 ? "브론즈" : "실버", game.Member.Experience + "  |  " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap }; // 현재 상태 값
-            for (int i = 0; i < 4; i++) // 네 가지 상태 표시
+            string[] icons = { "icon_chips", "icon_debt", "icon_rank", "icon_experience", "icon_energy" }; // 상태별 아이콘
+            string[] values = { game.Chips.ToString("N0"), game.Debt.ToString("N0"), game.Member.Rank == 0 ? "브론즈" : "실버", game.Member.Experience + "  |  " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap, game.Energy + " / " + game.MaxEnergy }; // 현재 상태 값
+            for (int i = 0; i < icons.Length; i++) // 각 상태 표시
             { // 상태 행 시작
                 float y = 20 + i * 55; // 상태 행 높이
                 RoyalImage(icons[i], new Rect(25, y, 46, 46), true); // 상태 아이콘
@@ -217,6 +218,28 @@ namespace Moonlight // 게임 이름 공간
             if (RoyalButton(new Rect(760, 695, 400, 70), "시작 지점 불러오기")) Load("start"); // 시작 지점 복구
             if (RoyalButton(new Rect(760, 770, 400, 70), "최근 이벤트 불러오기")) Load("event"); // 최근 이벤트 복구
         } // 정지 화면 끝
+        void DrawRoyalRest() // 객실 휴식 화면 출력
+        { // 휴식 화면 시작
+            RoyalImage("notice_frame", new Rect(570, 85, 780, 900)); // 휴식 창 배경
+            RoyalImage("work_bed", new Rect(840, 190, 240, 190), true); // 침대 아이콘
+            RoyalLabel(new Rect(700, 375, 520, 55), "무료 짧은 휴식", royalTitle); // 휴식 화면 제목
+            RoyalLabel(new Rect(720, 455, 480, 170), "정력  " + game.Energy + " / " + game.MaxEnergy + "\n소요 시간  " + settings.shortRestMinutes + "분\n회복  +" + settings.shortRestRecovery + " 정력\n예상 종료  입장 후 " + ((game.Minutes + settings.shortRestMinutes) / 60).ToString("F1") + "시간\n청구까지  " + Math.Max(0, game.NextBill - game.Minutes).ToString("F0") + "분", royalText); // 휴식 조건과 청구 시간
+            if (game.RestActive) // 휴식 진행 확인
+            { // 휴식 진행 시작
+                RoyalLabel(new Rect(750, 650, 420, 55), "휴식 중  " + game.RestRemaining.ToString("F0") + "분 남음", royalText); // 휴식 남은 시간
+                return; // 진행 중 조작 제한
+            } // 휴식 진행 끝
+            if (RoyalButton(new Rect(760, 650, 400, 75), "휴식 시작")) // 휴식 시작 선택
+            { // 휴식 시작 처리
+                if (game.StartRest(settings)) // 휴식 가능 확인
+                { // 휴식 등록 시작
+                    panel = "resting"; // 진행 화면 전환
+                    Save("event"); // 휴식 시작 저장
+                } // 휴식 등록 끝
+                else message = "진행 중인 업무나 게임을 먼저 마쳐 주세요."; // 휴식 불가 안내
+            } // 휴식 시작 끝
+            if (RoyalButton(new Rect(800, 750, 320, 70), "닫기")) panel = ""; // 휴식 화면 닫기
+        } // 휴식 화면 끝
         void DrawRoyalEnd() // 실패와 탈출 결과 출력
         { // 결과 화면 시작
             RoyalImage(game.GameOver ? "background_gameover" : "background_victory", new Rect(0, 0, 1920, 1080)); // 결과 배경 이미지

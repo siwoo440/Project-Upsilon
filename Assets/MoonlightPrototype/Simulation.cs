@@ -7,6 +7,8 @@ namespace Moonlight // 게임 이름 공간
         public long startingChips = 10000000, startingDebt = 1000000000, minimumBill = 20000000; // 초기 경제 수치
         public long workReward = 4000000, minBet = 1000000, maxBet = 20000000; // 업무와 베팅 수치
         public float minutesPerSecond = 2, billingHours = 72, workMinutes = 120; // 시간 수치
+        public float shortRestMinutes = 60; // 짧은 휴식 시간 가안
+        public int startingEnergy = 100, maximumEnergy = 100, shortRestRecovery = 20; // 정력과 휴식 회복 가안
         public float walkSpeed = 4, runSpeed = 7; // 걷기와 달리기 속도
         public int decks = 1; // 카드 덱 수
         public bool dealerHitsSoft17 = false; // 소프트 17 규칙
@@ -72,12 +74,16 @@ namespace Moonlight // 게임 이름 공간
             { // 시간 구간 시작
                 double untilBill = Math.Max(0, game.NextBill - game.Minutes); // 청구까지 남은 시간
                 double step = Math.Min(elapsed, untilBill); // 청구 경계까지 진행
+                bool pendingCompletion = (game.WorkActive && game.WorkRemaining == 0) || (game.RestActive && game.RestRemaining == 0); // 완료 대기 활동 확인
+                if (pendingCompletion) step = 0; // 현재 시각의 완료 처리 우선
+                if (game.RestRemaining > 0) step = Math.Min(step, game.RestRemaining); // 휴식 완료 시각 제한
                 if (game.WorkRemaining > 0) // 진행 중인 업무 확인
                 { // 업무 경계 시작
                     step = Math.Min(step, game.WorkRemaining); // 업무 완료 시각 제한
                 } // 업무 경계 끝
                 game.Minutes += step; // 게임 시각 증가
                 elapsed -= step; // 남은 시간 감소
+                if (game.RestRemaining > 0) game.RestRemaining = Math.Max(0, game.RestRemaining - step); // 휴식 남은 시간 감소
                 if (game.WorkRemaining > 0) // 업무 시간 확인
                 { // 업무 시간 시작
                     game.WorkRemaining = Math.Max(0, game.WorkRemaining - step); // 업무 남은 시간 감소
@@ -101,7 +107,13 @@ namespace Moonlight // 게임 이름 공간
                     game.AwardWorkExperience(settings); // 업무 경험치 지급
                     notify?.Invoke("work_done"); // 업무 완료 알림
                 } // 보상 처리 끝
-                if (step == 0 && game.Minutes < game.NextBill) // 진행 불가 확인
+                if (game.RestRemaining == 0 && game.RestActive) // 휴식 완료 확인
+                { // 휴식 완료 시작
+                    game.RestActive = false; // 휴식 완료 표시
+                    game.Energy = (int)Math.Max(0, Math.Min((long)Math.Max(0, game.MaxEnergy), (long)game.Energy + Math.Max(0, settings.shortRestRecovery))); // 정력 회복과 최대치 제한
+                    notify?.Invoke("rest_done"); // 휴식 완료 알림
+                } // 휴식 완료 끝
+                if (step == 0 && !pendingCompletion && game.Minutes < game.NextBill) // 진행 불가 확인
                 { // 반복 중단 시작
                     break; // 무한 반복 방지
                 } // 반복 중단 끝
@@ -113,6 +125,9 @@ namespace Moonlight // 게임 이름 공간
         public long Chips, Debt, Loan; // 확정 칩과 부채
         public int BillCount; // 완료한 청구 횟수
         public double Minutes, NextBill, WorkRemaining; // 게임 시각과 일정
+        public double RestRemaining; // 남은 휴식 시간
+        public int Energy = 100, MaxEnergy = 100; // 현재 정력과 최대 정력
+        public bool RestActive; // 휴식 진행 상태
         public uint RandomState = 2463534242; // 저장 가능한 난수 상태
         public bool GameOver, Escaped, WorkActive, WorkSilver, Seated; // 종료와 착석 상태
         public Membership Member = new Membership(); // 회원 등급 저장 상태
@@ -123,7 +138,15 @@ namespace Moonlight // 게임 이름 공간
             Chips = settings.startingChips; // 시작 칩 설정
             Debt = settings.startingDebt; // 시작 빚 설정
             NextBill = settings.billingHours * 60; // 첫 청구 시각 설정
+            Energy = settings.startingEnergy; MaxEnergy = settings.maximumEnergy; // 초기 정력 설정
         } // 생성 끝
+        public bool StartRest(GameSettings settings) // 무료 짧은 휴식 시작
+        { // 휴식 시작 범위
+            if (GameOver || Escaped || RestActive || WorkActive || Seated || settings.shortRestMinutes <= 0) return false; // 휴식 가능 상태 확인
+            RestActive = true; // 휴식 진행 표시
+            RestRemaining = settings.shortRestMinutes; // 휴식 시간 설정
+            return true; // 휴식 시작 결과
+        } // 휴식 시작 끝
         public void EnsureMembership() // 기존 저장 자료 호환
         { // 회원 상태 확인 시작
             if (Member == null) // 회원 정보 누락 확인
@@ -133,7 +156,7 @@ namespace Moonlight // 게임 이름 공간
         } // 회원 상태 확인 끝
         public bool SitAtBlackjack() // 블랙잭 착석
         { // 착석 시작
-            if (GameOver || Escaped) return false; // 게임 종료 상태 확인
+            if (GameOver || Escaped || RestActive) return false; // 게임 종료와 휴식 상태 확인
             Seated = true; // 착석 상태 기록
             return true; // 착석 성공
         } // 착석 끝
@@ -174,7 +197,7 @@ namespace Moonlight // 게임 이름 공간
         public bool StartSilverWork(GameSettings settings) // 실버 업무 시작
         { // 실버 업무 시작 범위
             EnsureMembership(); // 회원 상태 보장
-            if (Member.Rank < 1 || WorkActive) return false; // 등급과 진행 상태 확인
+            if (Member.Rank < 1 || WorkActive || RestActive) return false; // 등급과 진행 상태 확인
             WorkSilver = true; // 실버 업무 기록
             WorkRemaining = settings.workMinutes; // 업무 시간 설정
             WorkActive = true; // 업무 진행 표시
@@ -214,7 +237,7 @@ namespace Moonlight // 게임 이름 공간
         } // 조기 상환 끝
         public void StartWork(GameSettings settings) // 업무 시작
         { // 업무 시작 범위
-            if (!WorkActive) { WorkRemaining = settings.workMinutes; WorkActive = true; } // 미진행 업무 등록
+            if (!WorkActive && !RestActive) { WorkRemaining = settings.workMinutes; WorkActive = true; } // 미진행 업무 등록
         } // 업무 시작 끝
         public uint NextRandom() // 재현 가능한 난수
         { // 난수 생성 시작
@@ -230,7 +253,7 @@ namespace Moonlight // 게임 이름 공간
         } // 추출 끝
         public bool StartBlackjack(GameSettings settings, long bet) // 베팅과 카드 배분
         { // 라운드 시작
-            if (Round.phase == 1 || bet < settings.minBet || bet > settings.maxBet || bet > Chips) return false; // 베팅 가능 여부
+            if (RestActive || Round.phase == 1 || bet < settings.minBet || bet > settings.maxBet || bet > Chips) return false; // 베팅 가능 여부
             Chips -= bet; // 확정 칩에서 베팅 분리
             Round = new Round { phase = 1, wager = bet }; // 새 라운드 상태
             for (int d = 0; d < Math.Max(1, settings.decks); d++) // 덱 수 반복
@@ -280,3 +303,4 @@ namespace Moonlight // 게임 이름 공간
         } // 결과 처리 끝
     } // 상태 끝
 } // 이름 공간 끝
+

@@ -4,6 +4,7 @@ using System.Reflection; // 게임 상태 확인
 using UnityEditor; // 편집기 기능
 using UnityEditor.SceneManagement; // 장면 열기 기능
 using UnityEngine; // 유니티 기능
+using UnityEngine.SceneManagement; // 씬 상태 확인
 using Moonlight; // 게임 상태 사용
 public static class TitlePlaySmoke // 타이틀 이어하기 검사
 { // 검사 시작
@@ -43,7 +44,7 @@ public static class TitlePlaySmoke // 타이틀 이어하기 검사
                 if (File.Exists(start)) File.Delete(start); // 이전 검사 시작 저장 정리
                 GameState state = new GameState(new GameSettings()); // 저장용 게임 상태
                 state.Chips = 7654321; // 검사할 칩 수
-                SaveData data = new SaveData { state = state, scenePath = "Assets/Moonlight/Prototype.unity" }; // 저장 자료 구성
+                SaveData data = new SaveData { state = state, scenePath = "Assets/Moonlight/Room.unity", z = -3 }; // 객실 저장 자료 구성
                 File.WriteAllText(manual, JsonUtility.ToJson(data)); // 검사 저장 생성
                 requested = true; // 중복 요청 방지
                 if (!TitleMenu.BeginContinue()) throw new Exception("이어하기 요청 실패"); // 이어하기 실행
@@ -53,6 +54,8 @@ public static class TitlePlaySmoke // 타이틀 이어하기 검사
             if (player == null) return; // 플레이어 대기
             GameState loaded = (GameState)typeof(Prototype).GetField("game", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(player); // 복구된 게임 상태
             if (loaded == null) return; // 초기화 대기
+            if (SceneManager.GetActiveScene().path != "Assets/Moonlight/Room.unity") return; // 저장 씬 로딩 대기
+            if ((bool)typeof(Prototype).GetField("isTransitioning", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(player)) return; // 저장 복구 완료 대기
             if (loaded.Chips != 7654321 || File.Exists(start)) throw new Exception("이어하기 저장 복구 실패"); // 상태와 시작 저장 확인
             Debug.Log("TITLE_PLAY_SMOKE_OK"); // 검사 성공 표시
             Finish(0); // 정상 종료
@@ -73,3 +76,4 @@ public static class TitlePlaySmoke // 타이틀 이어하기 검사
         EditorApplication.Exit(code); // 편집기 종료
     } // 복구 끝
 } // 검사 끝
+

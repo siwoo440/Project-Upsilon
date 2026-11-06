@@ -23,7 +23,8 @@ public static class DayTwoValidation // 이동 경로 검증 도구
         } // 재질 확인 끝
         Debug.Log("SCENE_ENVIRONMENT_ASSETS_OK"); // 저장된 재질 검증 성공
         GameObject anchors = GameObject.Find("Interaction Targets"); // 상호작용 위치 묶음 확인
-        if (anchors == null || anchors.transform.childCount != 4) throw new Exception("장면에 상호작용 지점이 없습니다."); // 지점 저장 확인
+        if (anchors == null || anchors.transform.childCount != 5) throw new Exception("장면에 상호작용 지점이 없습니다."); // 지점 저장 확인
+        SceneInteractionPoint[] points = anchors.GetComponentsInChildren<SceneInteractionPoint>(); // 저장된 지점 목록
         foreach (SceneInteractionPoint point in anchors.GetComponentsInChildren<SceneInteractionPoint>()) // 저장된 지점 확인
         { // 지점 확인 시작
             if (SceneInteractionPoint.Nearest(point.transform.position) != point.target) throw new Exception("상호작용 지점 연결 오류: " + point.name); // 지점 연결 검사
@@ -48,7 +49,7 @@ public static class DayTwoValidation // 이동 경로 검증 도구
             Vector2Int point = queue.Dequeue(); // 다음 위치 선택
             float x = point.x * 0.5f; // 가로 실제 좌표
             float z = point.y * 0.5f; // 세로 실제 좌표
-            string target = MapLayout.Nearest(x, z); // 주변 상호작용 대상
+            string target = SceneInteractionPoint.NearestFrom(new Vector3(x, 0, z), points); // 주변 상호작용 대상
             zones.Add(MapLayout.Zone(x, z)); // 현재 장소 기록
             if (target != "") // 대상 존재 확인
             { // 대상 기록 시작
@@ -70,7 +71,7 @@ public static class DayTwoValidation // 이동 경로 검증 도구
                 } // 이동 가능 끝
             } // 인접 탐색 끝
         } // 탐색 끝
-        foreach (string name in new string[] { "luna", "work", "blackjack", "cashier" }) // 필수 대상 확인
+        foreach (string name in new string[] { "luna", "work", "blackjack", "cashier", "room" }) // 필수 대상 확인
         { // 대상 검사 시작
             if (!reached.Contains(name)) // 도달 실패 확인
             { // 실패 처리 시작
