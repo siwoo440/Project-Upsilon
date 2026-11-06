@@ -83,19 +83,20 @@ namespace Moonlight // 게임 이름 공간
         { // 상태 정보 시작
             string[] icons = { "icon_chips", "icon_debt", "icon_rank", "icon_experience", "icon_energy" }; // 상태별 아이콘
             string[] values = { game.Chips.ToString("N0"), game.Debt.ToString("N0"), game.Member.Rank == 0 ? "브론즈" : "실버", game.Member.Experience + "  |  " + game.Member.CycleGameExperience + "/" + settings.cycleGameCap, game.Energy + " / " + game.MaxEnergy }; // 현재 상태 값
+            float[] positions = { 25, 315, 650, 835, 1050 }; // 가로 상태별 시작 위치
+            float[] widths = { 225, 270, 120, 150, 145 }; // 수치별 최대 너비
             for (int i = 0; i < icons.Length; i++) // 각 상태 표시
             { // 상태 행 시작
-                float y = 20 + i * 55; // 상태 행 높이
-                RoyalImage(icons[i], new Rect(25, y, 46, 46), true); // 상태 아이콘
-                RoyalLabel(new Rect(80, y + 7, 320, 34), values[i], royalText); // 상태 값
+                RoyalImage(icons[i], new Rect(positions[i], 20, 46, 46), true); // 가로 상태 아이콘
+                RoyalLabel(new Rect(positions[i] + 55, 27, widths[i], 34), values[i], royalText); // 가로 상태 값
             } // 상태 행 끝
             RoyalImage("countdown_frame", new Rect(1480, 15, 420, 160)); // 청구 시계 배경
             RoyalImage("icon_bill_clock", new Rect(1530, 47, 75, 75), true); // 청구 시계 아이콘
             double remaining = Math.Max(0, game.NextBill - game.Minutes); // 남은 게임 시간
             RoyalLabel(new Rect(1610, 67, 260, 28), "다음 청구까지  " + (remaining / 60).ToString("F1") + "시간", royalSmall); // 청구 남은 시간
             RoyalLabel(new Rect(1610, 96, 260, 33), game.PreviewBill(settings).ToString("N0") + " 칩", royalText); // 예상 청구액
-            RoyalImage("countdown_frame", new Rect(600, 5, 720, 125)); // 상태 알림 배경
-            RoyalLabel(new Rect(680, 45, 560, 35), message, royalSmall); // 상태 안내
+            RoyalImage("countdown_frame", new Rect(600, 65, 720, 125)); // 상태 알림 배경
+            RoyalLabel(new Rect(680, 105, 560, 35), message, royalSmall); // 상태 안내
         } // 상태 정보 끝
         void DrawRoyalPrompt() // 주변 상호작용 출력
         { // 주변 안내 시작
